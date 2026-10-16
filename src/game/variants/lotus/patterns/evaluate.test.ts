@@ -4,6 +4,21 @@ import scoring from './fixtures/scoring.json'
 import type { GoldenScoreCase, GoldenWinCase } from './fixtures/types'
 import { evaluateWin } from './evaluate'
 import { compareScores, scorePatterns } from './score'
+import type { TileType } from '../../../core/contracts/types'
+import { TILE_TYPES } from '../../../core/rules/tiles'
+
+const luxuryAnyWait: TileType[] = ['m1','m1','m1','m1','p2','p2','p5','p5','s3','s3','s8','s8','red']
+describe('豪华七对精吊不能接炮或抢杠', () => {
+  it('忽略手中四张已占满的牌面，所有真实可摸牌只能自摸', () => {
+    const input = { concealed: luxuryAnyWait, melds: [], jokers: ['red','green'] as TileType[], opening: null }
+    for (const tile of TILE_TYPES.filter(t => t !== 'm1')) {
+      expect(evaluateWin({ ...input, winningTile: tile, source: 'self-draw' }), tile).not.toBeNull()
+      expect(evaluateWin({ ...input, winningTile: tile, source: 'discard' }), tile).toBeNull()
+      expect(evaluateWin({ ...input, winningTile: tile, source: 'robbed-kong' }), tile).toBeNull()
+    }
+    expect(evaluateWin({ ...input, winningTile: 'm1', source: 'self-draw' })).toBeNull()
+  })
+})
 
 describe('E02 actual evaluator golden acceptance', () => {
   it.each(golden.cases as readonly GoldenWinCase[])('$id', ({ input, expected }) => {

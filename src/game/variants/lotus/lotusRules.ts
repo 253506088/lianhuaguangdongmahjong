@@ -567,13 +567,18 @@ export function waitingTiles(hand: TileType[], exposedMeldCount: number, jokers:
 }
 
 /**
- * 听任意：听口覆盖全部 34 种牌（典型形态是单吊精牌），与听牌面板 any=true 同口径。
+ * 听任意：覆盖所有尚可能摸入的牌面；手中已占满四张的牌面无需再等待第五张。
  * 产品规则（2026-10 确认）：莲花麻将听任意**只能自摸**——点炮胡（含地胡）与抢杠胡
  * 均不成立，只有摸牌成胡可胡（杠上开花属自摸，保留）。后端 LotusLegacyRuleSet.is_any_wait
  * 同一口径（manager.find_claims / can_rob_kong 封锁）。
  */
 export function isAnyWait(hand: TileType[], exposedMeldCount: number, jokers: TileType[], jokerSubstitutes: TileType[] = ['white']): boolean {
-  return waitingTiles(hand, exposedMeldCount, jokers, jokerSubstitutes).length === TILE_TYPES.length
+  return coversAllDraws(waitingTiles(hand, exposedMeldCount, jokers, jokerSubstitutes), hand)
+}
+
+/** 只排除本家已持有四张的牌面，不能用牌河耗尽把普通窄听变成任意听。 */
+export function coversAllDraws(waits: readonly TileType[], ownedTiles: readonly TileType[] = []): boolean {
+  return waits.length > 0 && TILE_TYPES.every(tile => waits.includes(tile) || ownedTiles.filter(t => t === tile).length >= 4)
 }
 
 /** 点炮胡（吃胡）：手牌补入弃牌成胡，且非听任意——听任意只能自摸，不提供吃胡。 */

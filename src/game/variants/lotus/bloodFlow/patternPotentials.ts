@@ -5,7 +5,7 @@ import { canDevelopPatternWithMelds } from './patternReachability'
 import type { Meld, TileType } from '../../../core/contracts/types'
 import { HONORS, TILE_TYPES } from '../../../core/rules/tiles'
 import type { PatternId } from '../patterns/types'
-import { waitingTiles } from '../lotusRules'
+import { coversAllDraws, waitingTiles } from '../lotusRules'
 import { forecastSelfDrawIncome } from './incomeForecast'
 import type { WinSource } from './types'
 import { BLOOD_FLOW_AI, BLOOD_FLOW_CONFIG, type BloodFlowAiConfig } from './config'
@@ -548,7 +548,7 @@ export function chainEvEst(
   const waits = waitingTilesCached(hand, melds.length, jokers)
   if (!waits.length) return 0
   // 任意听只能自摸，不能用未见牌张数虚构吃胡收入或未来摸牌机会。
-  if (isAnyTileWait(waits)) {
+  if (isAnyTileWait(waits, hand)) {
     return forecastSelfDrawIncome(hand, melds, jokers, visibleTiles, wallCount, config.chainHorizon, drawOffset)
   }
   const chainFactor = Math.min(1, config.chainHorizon / Math.max(1, wallCount / 4))
@@ -565,6 +565,6 @@ export function chainEvEst(
 }
 
 /** 听口是否覆盖全部 34 种（单吊任意听 / 九莲形态）。 */
-export function isAnyTileWait(waits: readonly TileType[]) {
-  return waits.length >= TILE_TYPES.length
+export function isAnyTileWait(waits: readonly TileType[], ownedTiles: readonly TileType[] = []) {
+  return coversAllDraws(waits, ownedTiles)
 }

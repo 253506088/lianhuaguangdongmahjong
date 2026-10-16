@@ -13,6 +13,7 @@ import { bloodFlowEvContext, isFinalSelfDrawWin } from './evContext'
 import { opponentPatternExposure, opponentRiskProfiles, type OpponentRiskProfile } from '../../../shared/ai/opponentPatternRisk'
 import { decideDefensePolicy, ownHandFacts, type DefensePolicyConfig } from './defensePolicy'
 import { evaluateHandProgress } from '../../../shared/ai/handProgress'
+import { preferredAnyWaitKong } from './anyWaitKong'
 
 export { bloodFlowEvContext, firstWinFloor } from './evContext'
 
@@ -136,6 +137,8 @@ export function decideBloodFlowAction(view: BloodFlowSeatView, minimumFirstPayme
   const moves = bloodFlowAiActions(view)
   if (!moves.length) return null
   if (moves.length === 1) return moves[0]
+  const bloom = preferredAnyWaitKong(view, moves)
+  if (bloom) return bloom
   const locked = view.public.seats[view.seat].locked
   const win = moves.find(a => a.kind === 'win')
   if (win) return locked || (view.ownScore?.paymentPerPayer ?? 0) >= minimumFirstPayment
@@ -332,7 +335,10 @@ export function decideBloodFlowActionEv(view: BloodFlowSeatView, config: BloodFl
   // 政策一次决策只算一遍；候选构造与兜牌分支共用（硬约束下候选必须用同一份 config）。
   const defense = config.defense.mode === 'off' ? undefined : bloodFlowDefensePolicy(view, config)
   // 大牌路线收窄（2026-09-14）：mode 'bot' / 'all' 时也作用于本地 AI 座（LLM 座走 buildBloodFlowDecisionInput）。
-  const routePlan = narrowRoutesForBot(view, bloodFlowAiActions(view, config, defense), config)
+  const candidates = bloodFlowAiActions(view, config, defense)
+  const bloom = preferredAnyWaitKong(view, candidates)
+  if (bloom) return bloom
+  const routePlan = narrowRoutesForBot(view, candidates, config)
   const moves = routePlan.actions
   if (!moves.length) return null
   if (moves.length === 1) return moves[0]

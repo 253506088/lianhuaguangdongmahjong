@@ -22,6 +22,7 @@ import { createBloodFlowWorkerClient } from './workerClient'
 import type { BloodFlowSeatView } from './seatView'
 import { visibleTiles } from './seatView'
 import { computeReformHint } from './reformHint'
+import { coversAllDraws } from '../lotusRules'
 import { createBloodFlowWinMusic, totalBloodFlowWinTiles } from './winMusic'
 import type { WinMusicBgmPort, WinMusicState } from './winMusic'
 import type { BloodFlowAction, BloodFlowOpeningState } from './state'
@@ -952,7 +953,10 @@ export function useBloodFlowGame(options: BloodFlowGameOptions = {}) {
     if (!view.value || !hintsVisible.value || !scores.length) return null
     const visible = visibleTiles(view.value)
     const tiles = scores.map(w => ({ tile: w.tile, remaining: Math.max(0, 4 - visible.filter(t => t === w.tile).length) }))
-    return { discard, tiles, any: tiles.length === 34, remaining: tiles.reduce((n, t) => n + t.remaining, 0) }
+    const player = view.value.players[view.value.seat]
+    const removed = discard !== null ? player.hand.indexOf(discard) : player.drawnTileIndex
+    const owned = [...player.hand.filter((_, index) => index !== removed), ...player.melds.flatMap(m => m.tiles)]
+    return { discard, tiles, any: coversAllDraws(tiles.map(t => t.tile), owned), remaining: tiles.reduce((n, t) => n + t.remaining, 0) }
   }
   const currentWaitInfo = computed(() => makeWaitInfo(handHints.value?.current ?? []))
   const userTingOptions = computed(() => !common.isUserTurn.value ? [] : (handHints.value?.discards ?? []).flatMap(item => {

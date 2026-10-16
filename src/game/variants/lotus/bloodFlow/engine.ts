@@ -1,6 +1,7 @@
 import type { GamePlayer, TileType, TableActionEvent, TableActionType } from '../../../core/contracts/types'
 import { sortTilesWithJokers, TILE_TYPES } from '../../../core/rules/tiles'
-import { canChi, concealedKongs, windKong } from '../lotusRules'
+import { canChi, concealedKongs, windKong, waitingTiles } from '../lotusRules'
+import { postKongState } from './kongState'
 import { buildRingWall, resolveFlip, resolveOpeningStack, buildDrawOrderWall, wallBreakIndexForOpeningStack, takeLotusTailTile } from '../lotusWall'
 import { evaluateWin } from '../patterns/evaluate'
 import { BLOOD_FLOW_ACTION_PRIORITY, BLOOD_FLOW_CONFIG, BLOOD_FLOW_TIMING, bloodFlowWinTiming } from './config'
@@ -213,7 +214,22 @@ export class BloodFlowEngine {
       player.melds.forEach((m, meldIndex) => { if (m.type === 'peng' && player.hand.includes(m.tile)) moves.push({ kind: 'added-kong', meldIndex }) })
     }
     player.hand.forEach((_, index) => { if (!this.seats[seat].locked || index === player.drawnTileIndex) moves.push({ kind: 'discard', index }) })
-    this.open('turn', this.drawSource ?? this.source('draw', seat, player.hand.at(-1)!), vector(s => s === seat ? moves : []))
+    const legal = moves.filter(action => this.kongKeepsReady(seat, action))
+    this.open('turn', this.drawSource ?? this.source('draw', seat, player.hand.at(-1)!), vector(s => s === seat ? legal : []))
+  }
+
+  /** 胡后只能开杠仍听牌的组合；补牌未知，不允许靠补牌修复已经失听的暗手。 */
+  private kongKeepsReady(seat: Seat, action: BloodFlowAction, claimedTile?: TileType) {
+    if (!this.seats[seat].locked) return true
+    if (action.kind !== 'gang' && action.kind !== 'added-kong' && action.kind !== 'concealed-kong' && action.kind !== 'wind-kong') return true
+    const player = this.players[seat]
+    const post = postKongState({ hand: player.hand, melds: player.melds,
+      kind: action.kind === 'gang' ? 'discard-gang' : action.kind,
+      tile: action.kind === 'gang' ? claimedTile : action.kind === 'concealed-kong' ? action.tile : undefined,
+      meldIndex: action.kind === 'added-kong' ? action.meldIndex : undefined })
+    if (!post) return false
+    const owned = [...post.hand, ...post.melds.flatMap(m => m.tiles)]
+    return waitingTiles(post.hand, post.melds.length, this.jokers).some(tile => owned.filter(t => t === tile).length < 4)
   }
 
   command(seat: Seat, action: BloodFlowAction): EngineCommand {
@@ -324,7 +340,7 @@ export class BloodFlowEngine {
       // kong-priority 实验：锁手座位也可大明杠（仍不可碰/吃）。
       if (source.kind === 'discard' && this.wall.length && (!this.seats[seat].locked || BLOOD_FLOW_ACTION_PRIORITY === 'kong-priority')) {
         const hand = this.players[seat].hand, count = hand.filter(t => t === source.tile).length
-        if (count >= 3) actions.push({ kind: 'gang' })
+        if (count >= 3 && this.kongKeepsReady(seat, { kind: 'gang' }, source.tile)) actions.push({ kind: 'gang' })
         if (count >= 2 && !this.seats[seat].locked) actions.push({ kind: 'peng' })
         if (seat === nextSeat(source.seat) && !this.seats[seat].locked) for (const chi of canChi(hand, source.tile, this.jokers)) actions.push({ kind: 'chi', tiles: chi.tiles })
       }

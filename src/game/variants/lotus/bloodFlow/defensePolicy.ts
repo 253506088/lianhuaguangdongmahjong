@@ -9,7 +9,7 @@
 // 纯函数、确定性；只读本家手牌 + 公共信息，不推断对手暗手。
 import type { TileType } from '../../../core/contracts/types'
 import { BLOOD_FLOW_CONFIG, BLOOD_FLOW_DEFENSE } from './config'
-import { waitingTilesCached } from './patternPotentials'
+import { isAnyTileWait, waitingTilesCached } from './patternPotentials'
 
 export { BLOOD_FLOW_DEFENSE }
 
@@ -138,7 +138,7 @@ export function ownHandFacts(
     const waits = waitingTilesCached(after, exposed, jokers)
     if (!waits.length) continue
     canTenpai = true
-    if (waits.length >= 34) anyWaitReachable = true
+    if (isAnyTileWait(waits, after)) anyWaitReachable = true
     const effective = waits.reduce((sum, wait) => sum + remaining(wait), 0)
     if (effective > bestWaitRemaining) bestWaitRemaining = effective
   }
