@@ -5,6 +5,8 @@ import { BloodFlowEngine } from './engine'
 import type { BloodFlowAction, BloodFlowOpeningState } from './state'
 import { SEATS } from './state'
 import { bloodFlowSeatView } from './seatView'
+import { decideBloodFlowActionEv } from './ai'
+import { waitingTiles } from '../lotusRules'
 
 const waiting: TileType[] = ['m1', 'm2', 'm3', 'p1', 'p2', 'p3', 's1', 's2', 's3', 'm4', 'm5', 'm6', 'east']
 function scenario(hands: (TileType[] | null)[], melds: Meld[][] = [[], [], [], []], emptyWall = false, next?: TileType, jokers: TileType[] = ['red', 'green']) {
@@ -61,6 +63,47 @@ describe('精吊任意听只能自摸', () => {
     expect(bloodFlowSeatView(engine, 0).ownScore?.source).toBe('kong-bloom')
     expect(engine.submit(engine.command(0, { kind: 'win' }))).toBe(true)
     expect(bloodFlowSeatView(engine, 0).public.batches.at(-1)?.winners[0].score.source).toBe('kong-bloom')
+    engine.assertConservation()
+  })
+})
+
+describe('听任意开杠与锁手保护', () => {
+  const safe: TileType[] = ['m1','m1','m1','m1','m2','m3','m4','p1','p2','p3','east','east','east','red']
+  it('普通 AI 在保留听任意且倍数不降时选择暗杠，并实际杠开', () => {
+    const engine = scenario([safe, null, null, null])
+    const before = bloodFlowSeatView(engine, 0).ownScore!
+    const action = decideBloodFlowActionEv(bloodFlowSeatView(engine, 0))!
+    expect(action).toEqual({ kind: 'concealed-kong', tile: 'm1' })
+    expect(engine.submit(engine.command(0, action))).toBe(true)
+    expect(bloodFlowSeatView(engine, 0).ownScore?.source).toBe('kong-bloom')
+    expect(bloodFlowSeatView(engine, 0).ownScore!.paymentPerPayer).toBeGreaterThanOrEqual(before.paymentPerPayer)
+    engine.assertConservation()
+  })
+  it.each([false, true])('锁手=%s：会拆散七对听口的明杠只在未胡时提供', locked => {
+    const pairs: TileType[] = ['m5','m5','m5','p2','p2','p5','p5','s3','s3','s8','s8','east','east']
+    const engine = scenario([discarder, pairs, null, null])
+    expect(waitingTiles(pairs, 0, engine.jokers).length).toBeGreaterThan(0)
+    engine.seats[1] = { ...engine.seats[1], locked }
+    expect(engine.submit(engine.command(0, { kind: 'discard', index: 13 }))).toBe(true)
+    expect(bloodFlowSeatView(engine, 1).ownActions.some(a => a.kind === 'gang')).toBe(!locked)
+    if (locked) expect(engine.submit(engine.command(1, { kind: 'gang' }))).toBe(false)
+  })
+  it.each([
+    { action: { kind: 'concealed-kong', tile: 'm1' } as BloodFlowAction,
+      hand: ['m1','m1','m1','m1','p2','p2','p5','p5','s3','s3','s8','s8','red','m7'] as TileType[], melds: [] as Meld[] },
+    { action: { kind: 'wind-kong' } as BloodFlowAction,
+      hand: ['m1','m9','p1','p9','s1','s9','east','south','west','north','red','green','white','m2'] as TileType[], melds: [] as Meld[] },
+    { action: { kind: 'added-kong', meldIndex: 0 } as BloodFlowAction,
+      hand: ['m5','m6','p1','p2','p3','s1','s2','s3','east','east','p7'] as TileType[],
+      melds: [{ type: 'peng', tile: 'm5', tiles: ['m5','m5','m5'] }] as Meld[] },
+  ])('锁手后移除失听的 $action.kind，并拒绝提交', ({ action, hand, melds }) => {
+    const engine = scenario([hand, null, null, null], [melds, [], [], []])
+    expect(waitingTiles(hand.slice(0, -1), melds.length, engine.jokers).length).toBeGreaterThan(0)
+    expect(engine.window!.options[0]).toContainEqual(action)
+    engine.seats[0] = { ...engine.seats[0], locked: true, winCount: 1 }
+    engine['openTurn']()
+    expect(engine.window!.options[0]).not.toContainEqual(action)
+    expect(engine.submit(engine.command(0, action))).toBe(false)
     engine.assertConservation()
   })
 })

@@ -6,6 +6,7 @@ import type { PublicWinScore } from './types'
 import type { BloodFlowAiConfig } from './config'
 import { BLOOD_FLOW_AI } from './config'
 import { normalOpportunities, ownDrawOpportunities, unseenCounts } from './incomeForecast'
+import { coversAllDraws } from '../lotusRules'
 
 export interface ReformHint {
   readonly discard: TileType
@@ -61,15 +62,16 @@ export function computeReformHint(input: {
   const config = input.config ?? BLOOD_FLOW_AI
   const payers = input.ownScore.source === 'self-draw' || input.ownScore.source === 'kong-bloom' ? 3 : 1
   const winTotal = input.ownScore.paymentPerPayer * payers
+  const anyWait = (waits: WaitScores, index: number) => coversAllDraws(waits.map(w => w.tile), input.hand.filter((_, i) => i !== index))
   const selfOnly = (config.chainForecast ?? 'legacy') === 'legacy'
-    && (input.hints.current.length >= 34 || input.hints.discards.some(item => item.waits.length >= 34))
+    && (anyWait(input.hints.current, input.drawnTileIndex) || input.hints.discards.some(item => anyWait(item.waits, input.hand.indexOf(item.discard))))
   const winEv = winTotal + chainOf(input.hints.current, input.visible, input.wallCount, config, selfOnly)
   const drawnTile = input.hand[input.drawnTileIndex]
   let best: { discard: TileType; ev: number; anyWait: boolean } | null = null
   for (const item of input.hints.discards) {
     if (item.discard === drawnTile || !item.waits.length) continue
     const ev = chainOf(item.waits, input.visible, input.wallCount, config, selfOnly)
-    if (!best || ev > best.ev) best = { discard: item.discard, ev, anyWait: item.waits.length >= 34 }
+    if (!best || ev > best.ev) best = { discard: item.discard, ev, anyWait: anyWait(item.waits, input.hand.indexOf(item.discard)) }
   }
   if (!best || best.ev < winEv * config.reformGainRatio) return null
   return { discard: best.discard, reason: best.anyWait ? 'any-wait' : 'better', gain: Math.round(best.ev - winEv) }

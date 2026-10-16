@@ -10,7 +10,7 @@ import { isLastOpportunityRon } from './winOpportunity'
 import { forecastConditionalIncome } from './conditionalRon'
 import {
   chainEvEst, patternPotentialEv, patternPotentialTotal, patternPotentials,
-  waitingTilesCached, type PatternDirection,
+  waitingTilesCached, isAnyTileWait, type PatternDirection,
 } from './patternPotentials'
 
 /** 首胡门槛（单家支付，合法 10 的倍数档），按墙余分段。 */
@@ -88,7 +88,7 @@ export function bloodFlowEvContext(view: BloodFlowSeatView, config: BloodFlowAiC
       ? [hand.filter((_, index) => index !== action.index)] : []) : []
   // 旧估值比较涉及任意听时，两侧都用实际自摸机会，避免把旧张数估值与新收入相比较。
   const incomeModel = (config.chainForecast ?? 'legacy') === 'legacy'
-    && [lockedHand, ...reformHands].some(tiles => waitingTilesCached(tiles, melds.length, jokers).length >= 34)
+    && [lockedHand, ...reformHands].some(tiles => isAnyTileWait(waitingTilesCached(tiles, melds.length, jokers), tiles))
     ? 'self-draw-v1' : config.chainForecast ?? 'legacy'
   const chain = (tiles: readonly TileType[], offset = drawOffset) => wallCount <= 0 ? 0 : config.chainForecast === 'source-v2' && config.opportunityCalibration
     ? config.conditionalRon
@@ -123,7 +123,7 @@ export function bloodFlowEvContext(view: BloodFlowSeatView, config: BloodFlowAiC
         index: action.index,
         tile: hand[action.index],
         ev: chain(after),
-        anyWait: waits.length >= 34,
+        anyWait: isAnyTileWait(waits, after),
         waitCount: waits.length,
         patterns: [...patternPotentials(after, melds, jokers, config.sevenPairsModel)]
           .sort((a, b) => b.score - a.score).slice(0, 3)

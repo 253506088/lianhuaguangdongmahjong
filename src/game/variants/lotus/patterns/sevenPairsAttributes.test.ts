@@ -4,7 +4,7 @@ import { evaluateWin } from './evaluate'
 
 const pairs = (...tiles: TileType[]): TileType[] => tiles.flatMap(tile => [tile, tile])
 
-const cases: { name: string; hand: TileType[]; jokers?: TileType[]; items: string[]; multiplier: number; natural?: boolean }[] = [
+const cases: { name: string; hand: TileType[]; jokers?: TileType[]; items: string[]; multiplier: number; natural?: boolean; selfDrawOnly?: boolean }[] = [
   { name: '七对＋断幺九', hand: pairs('m2', 'm4', 'p3', 'p5', 's2', 's6', 's8'), items: ['sevenPairs', 'all-simples'], multiplier: 7 },
   { name: '豪华七对＋断幺九', hand: pairs('m2', 'm2', 'p3', 'p5', 's2', 's6', 's8'), items: ['luxury-seven-pairs', 'all-simples'], multiplier: 9 },
   { name: '七对＋清一色', hand: pairs('m1', 'm2', 'm4', 'm5', 'm6', 'm8', 'm9'), items: ['sevenPairs', 'pure-suit'], multiplier: 13 },
@@ -19,13 +19,15 @@ const cases: { name: string; hand: TileType[]; jokers?: TileType[]; items: strin
   { name: '豪华七对＋断幺九＋清一色', hand: pairs('m2', 'm2', 'm4', 'm5', 'm6', 'm7', 'm8'), items: ['luxury-seven-pairs', 'all-simples', 'pure-suit'], multiplier: 17 },
   { name: '精牌补成七对＋混幺九', hand: [...pairs('m1', 'm9', 'p1', 'p9', 's1'), 's9', 'red', ...pairs('east')], jokers: ['red'], items: ['sevenPairs', 'mixed-terminals'], multiplier: 17, natural: false },
   { name: '精牌补成豪华七对＋混幺九', hand: ['m1', 'm1', 'm1', 'red', ...pairs('m9', 'p1', 'p9', 'east', 'south')], jokers: ['red'], items: ['luxury-seven-pairs', 'mixed-terminals'], multiplier: 19, natural: false },
-  { name: '精牌补成豪华七对＋清幺九', hand: [...pairs('m1', 'm1', 'm9', 'p1', 'p9', 's1'), 'red', 's9'], jokers: ['red'], items: ['luxury-seven-pairs', 'pure-terminals'], multiplier: 31, natural: false },
+  { name: '精牌补成豪华七对＋清幺九', hand: [...pairs('m1', 'm1', 'm9', 'p1', 'p9', 's1'), 'red', 's9'], jokers: ['red'], items: ['luxury-seven-pairs', 'pure-terminals'], multiplier: 31, natural: false, selfDrawOnly: true },
 ]
 
 describe.each(cases)('$name', fixture => {
   it.each(['discard', 'self-draw'] as const)('叠加番型与实际支付一致：%s', source => {
     const win = evaluateWin({ concealed: fixture.hand.slice(0, -1), winningTile: fixture.hand.at(-1)!, melds: [],
       jokers: fixture.jokers ?? [], source, opening: null })!
+    // 六对＋一张精牌已经听任意，不能为凑出清幺九而接炮。
+    if (fixture.selfDrawOnly && source === 'discard') { expect(win).toBeNull(); return }
     expect(win).not.toBeNull()
     expect(win.decomposition.shape).toBe('sevenPairs')
     expect(win.score.items.map(item => item.id).sort()).toEqual(['concealed-hand', ...fixture.items].sort())

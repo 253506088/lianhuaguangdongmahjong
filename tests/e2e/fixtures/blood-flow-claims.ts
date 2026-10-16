@@ -21,7 +21,8 @@ const hands: TileType[][] = [
   ['m3','m4','m5','m5','m5','p1','p2','p3','s1','s2','s3','east','east'],
 ]
 if(new URLSearchParams(location.search).has('multiChi')) hands[1]=['m3','m4','m5','m5','m5','m6','m7','p1','p2','p3','east','east','east']
-if(new URLSearchParams(location.search).has('kongOnly')) hands[1]=['m5','m5','m5','p1','p4','p7','s1','s4','s7','east','east','north','north']
+if(new URLSearchParams(location.search).has('kongOnly')) hands[1]=['m5','m5','m5','m1','m2','m3','p1','p2','p3','s7','s8','east','east']
+if(new URLSearchParams(location.search).has('breaksReady')) hands[1]=['m5','m5','m5','p2','p2','p5','p5','s3','s3','s8','s8','east','east']
 // 改张场景：本家 4 副面子 + 单张 s7，牌墙首张为精牌 → 摸到精牌自摸窗口，可改张为单吊任意听。
 if(new URLSearchParams(location.search).has('reform')) {
   hands[1]=['m1','m1','m1','m2','m3','m4','m5','m5','m5','p1','p1','p1','s7']

@@ -2,17 +2,27 @@ import { expect, test, type Page } from '@playwright/test'
 
 test.setTimeout(60_000)
 
+test('a locked seven-pairs player never sees a kong that breaks readiness', async ({ page }) => {
+  await page.goto('/tests/e2e/fixtures/blood-flow-claims.html?lockedKong=1&breaksReady=1&lockedAutoMs=15000')
+  const actions = page.locator('.action-bar')
+  await expect(actions.getByRole('button', { name: '胡', exact: true })).toBeVisible()
+  await expect(actions.getByRole('button', { name: '杠', exact: true })).toHaveCount(0)
+  expect(await page.evaluate(() => (window as any).__claimEvidence().ownActions)).toEqual([{ kind: 'win' }])
+})
+
 test('a locked player can see and click the real discard-kong button after the quick-auto delay', async ({ page }) => {
+  // 引擎建窗前固定时钟，不能事后回拨到 opensAt 之前。
+  await page.clock.install({ time: new Date('2026-09-19T00:00:00Z') })
+  await page.clock.pauseAt(new Date('2026-09-19T00:00:00Z'))
   await page.goto('/tests/e2e/fixtures/blood-flow-claims.html?lockedKong=1&lockedAutoMs=800&countdown=1')
   const gang = page.locator('.action-bar').getByRole('button', { name: '杠', exact: true })
   await expect(gang).toBeVisible()
   await expect(page.locator('.action-bar').getByRole('button', { name: '过', exact: true })).toHaveCount(0)
-  await page.clock.install({ time: new Date('2026-09-19T00:00:00Z') })
-  await page.clock.pauseAt(new Date('2026-09-19T00:00:00Z'))
   await page.clock.runFor(1_200)
   expect(await page.evaluate(() => (window as any).__claimEvidence().commands)).toEqual([])
   await gang.click()
   await expect.poll(() => page.evaluate(() => (window as any).__claimEvidence().commands[0]?.action.kind)).toBe('gang')
+  await expect.poll(() => page.evaluate(() => (window as any).__claimEvidence().melds[0]?.type)).toBe('gang')
 })
 
 test('a locked player may explicitly pass a discard-kong when no win is available', async ({ page }) => {
