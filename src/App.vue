@@ -13,6 +13,7 @@ import ReplayListView from './components/replay/ReplayListView.vue'
 import { useGame } from './game/variants/guangma/game'
 import { useLotusGame } from './game/variants/lotus/lotusGame'
 import { useBloodFlowGame } from './game/variants/lotus/bloodFlow/useBloodFlowGame'
+import { useShandongGame } from './game/variants/shandong/shandongGame'
 import { bloodFlowEnabled } from './game/variants/lotus/bloodFlow/availability'
 import { BLOOD_FLOW_CONFIG } from './game/variants/lotus/bloodFlow/config'
 import { createLocalLlmControllers, createLotusLlmControllers } from './game/llm/runtime'
@@ -30,6 +31,12 @@ import { defaultAvatarForSeat } from './game/core/presentation/avatar'
 import { initVibeHub, loginRequired, vibeUser } from './game/online/vibe/vibeClient'
 import type { MatchType, TileType } from './game/core/contracts/types'
 import { DEFAULT_RULE_VARIANT, getRuleVariant, type RuleVariant } from './game/core/rules/ruleVariants'
+import {
+  readRuleVariantPreference,
+  saveRuleVariantPreference,
+  readShandongJiangPreference,
+  saveShandongJiangPreference,
+} from './game/core/rules/rulePreference'
 import { useReplayRecorder } from './game/replay/useReplayRecorder'
 import { createAnalysisStorage } from './game/replay/analysis/storage'
 import { createAnalysisSession, reconcileAnalysisWithReplay } from './game/replay/analysis/session'
@@ -53,7 +60,15 @@ const robotIconUrl = `${import.meta.env.BASE_URL}img/robot.svg`
 const rulesOpen = ref(false)
 const resultVisible = ref(true)
 const selectedMatch = ref<MatchType>('east')
-const selectedRule = ref<RuleVariant>(DEFAULT_RULE_VARIANT)
+const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)
+const shandongJiang = ref<'258' | 'luan'>(readShandongJiangPreference())
+
+watch(selectedRule, (rule) => {
+  saveRuleVariantPreference(rule)
+})
+watch(shandongJiang, (jiang) => {
+  saveShandongJiangPreference(jiang)
+})
 const gameTableReady = ref(false)
 let tableReadyPromise: Promise<void> | null = null
 let tableReadyResolve: (() => void) | null = null
@@ -238,6 +253,16 @@ const bloodFlowGame = useBloodFlowGame({ playSound: playEffect, playSoundAndWait
   humanPlayerSeed: localHumanSeed, aiPlayerSeeds: lotusLlmSeeds, recorder: replay.hooks,
   // AI 分析记录：引擎拿到的是一个稳定代理（换场只换内部录制器）；关闭时为 null，零成本。
   analysis: analysis.port })
+const shandongGame = useShandongGame({
+  playSound: playEffect,
+  playSoundAndWait: playEffectAndWait,
+  countdownEnabled: false,
+  aiPlayerSeeds: localLlmSeeds,
+  humanPlayerSeed: localHumanSeed,
+  getTableThemeName: () => tableThemeName.value,
+  animeFixedTts: localAnimeFixedTts,
+  getJiangRule: () => shandongJiang.value,
+})
 /**
  * 联机（P2P）分析记录开场（§6）：血流房间在拿到**本场分析区场次 id** 时调这里。
  * 房主的场次 id 就是它那份展示回放的 id；客机从房主的快照信封里取 —— 两边同一个 id，
@@ -293,7 +318,7 @@ watch(() => vibeRemoteGame.rulesetId.value, (value) => {
 // vibeRemoteGame 的快照驱动表现层（房主自视快照/事件在 useVibeRemoteGame 内本地喂入）。
 const game = createActiveGamePort(
   gameMode,
-  () => selectedRule.value === 'lotus-blood-flow' ? bloodFlowGame : usesLotusLocalEngine.value ? lotusGame : localGame,
+  () => selectedRule.value === 'shandong' ? shandongGame : selectedRule.value === 'lotus-blood-flow' ? bloodFlowGame : usesLotusLocalEngine.value ? lotusGame : localGame,
   () => vibeRemoteGame.rulesetId.value === 'lotus-blood-flow' ? vibeRemoteGame.bloodFlowPort : vibeRemoteGame,
 )
 
@@ -309,13 +334,17 @@ const {
 // 莲花麻将专属：翻精指示牌 / 癞子集合 / 3D 牌山断点（仅本地莲花麻将模式有意义）。
 const lotusTable = computed(() => capabilities.value.lotusTable)
 const userHasWindKong = computed(() => capabilities.value.windKong?.available ?? false)
+const userCanMingLou = computed(() => capabilities.value.mingLou?.available ?? false)
 const userChi = (optionIndex: number) => capabilities.value.chi?.choose(optionIndex)
 const userWindKong = () => capabilities.value.windKong?.execute()
+const userMingLou = () => capabilities.value.mingLou?.execute()
 const flipTile = computed(() => lotusTable.value?.flipTile ?? null)
 // 广麻固定以白板为癞子；莲花麻将将精牌与白板替代能力分开传给界面。
 // 联机 lotus-classic 快照不下发精牌（jokerTiles 为空数组），需兜底为白板癞子，
 // 否则多人模式下白板无「癞」标记。莲花麻将（lotus-legacy）的精牌由快照下发，不受影响。
+// 山东麻将无癞子。
 const jokerTiles = computed<TileType[]>(() => {
+  if (selectedRule.value === 'shandong') return []
   const jokers = lotusTable.value?.jokerTiles
   return jokers && jokers.length ? jokers : ['white']
 })
@@ -638,6 +667,8 @@ const themeLockReason = computed(() => (
           :user-discard-waits="userDiscardWaits"
           :user-kongs="userKongs"
           :user-has-wind-kong="userHasWindKong"
+          :user-can-ming-lou="userCanMingLou"
+          :shandong-jiang="shandongJiang"
           :auto-play-enabled="gameMode === 'remote'"
           :auto-play="remoteAutoPlay"
           :llm-bubbles="llmBubbles"
@@ -661,6 +692,7 @@ const themeLockReason = computed(() => (
           @gang="userGang"
           @hu="userHu"
           @wind-kong="userWindKong"
+          @ming-lou="userMingLou"
           @toggle-auto-play="toggleAutoPlay"
           @ready="handleTableReady"
           @next-round="nextRound"
@@ -672,6 +704,7 @@ const themeLockReason = computed(() => (
           v-model:game-mode="gameMode"
           v-model:selected-match="selectedMatch"
           v-model:selected-rule="selectedRule"
+          v-model:shandong-jiang="shandongJiang"
           v-model:nickname-input="nicknameInput"
           v-model:join-code="joinCode"
           v-model:anime-character-id="animeCharacterId"

@@ -2,10 +2,11 @@
 import { computed, ref, watch } from 'vue'
 import { defaultAvatarForSeat } from '../game/core/presentation/avatar'
 import { displayImageSrc, materializedImageVersion } from '../game/core/presentation/imagePreload'
-import type { GamePlayer } from '../game/core/contracts/types'
+import type { GamePlayer, TileType } from '../game/core/contracts/types'
 import type { TableThemeName } from './table/three/tableTheme'
 import { animeCharacterAccent } from '../game/core/presentation/animeCharacterPalette'
 import { scoreDirection } from '../theme/themeEventPresentation'
+import MahjongTile from './MahjongTile.vue'
 
 const props = withDefaults(defineProps<{
   player: GamePlayer
@@ -20,7 +21,9 @@ const props = withDefaults(defineProps<{
   avatarOverride?: string
   /** AI 大模型吐槽气泡（可选；由上层管理过期） */
   bubble?: { text: string; id: number; persistent?: boolean } | null
-}>(), { active: false, actionActive: false, scoreDelta: 0, scoreFlowId: 0, dealer: false, avatarOverride: undefined, bubble: null })
+  /** 明搂听牌与剩余张数（他人视角） */
+  mingLouWaits?: Array<{ tile: TileType; remaining: number }>
+}>(), { active: false, actionActive: false, scoreDelta: 0, scoreFlowId: 0, dealer: false, avatarOverride: undefined, bubble: null, mingLouWaits: undefined })
 
 // 外部头像（联机真人）加载失败 → 回退到本地座位默认头像
 // 已物化的头像用本地 blob（座位会随快照重建，避免每次重建都做一次协商校验）。
@@ -36,12 +39,15 @@ function onAvatarError() {
 const animeStyle = computed(() => props.themeName === 'llmAnime'
   ? { '--anime-accent': animeCharacterAccent(props.player.characterId) }
   : undefined)
+const flowerCount = computed(() => (props.player.melds || []).filter((m) => m.type === 'flower').length)
 </script>
 
 <template>
   <section class="player-seat" :class="[`seat-${position}`, { active, 'action-active': actionActive }]" :style="animeStyle">
     <div class="avatar-wrap">
       <span v-if="dealer" class="dealer-badge">庄</span>
+      <span v-if="player.isMingLou" class="minglou-badge" title="明搂">搂</span>
+      <span v-if="flowerCount > 0" class="flower-badge" :title="`花牌: ${flowerCount}张`">🌸{{ flowerCount }}</span>
       <img class="avatar" :src="avatarSrc" :alt="`${player.name}头像`" @error="onAvatarError" />
       <div class="player-info">
         <strong>{{ player.name }}</strong>
@@ -61,6 +67,16 @@ const animeStyle = computed(() => props.themeName === 'llmAnime'
       <Transition name="llm-bubble">
         <div v-if="bubble" :key="bubble.id" class="llm-bubble" role="status" aria-live="polite">{{ bubble.text }}</div>
       </Transition>
+    </div>
+    <!-- 明搂听牌与剩余张数展示 -->
+    <div v-if="player.isMingLou && mingLouWaits?.length" class="minglou-waits-card" :class="`waits-${position}`">
+      <span class="minglou-waits-label">胡</span>
+      <div class="minglou-waits-list">
+        <div v-for="item in mingLouWaits" :key="item.tile" class="minglou-wait-tile" :class="{ exhausted: item.remaining === 0 }">
+          <MahjongTile :tile="item.tile" :theme-name="themeName" small disabled />
+          <span class="minglou-wait-remain">{{ item.remaining }}张</span>
+        </div>
+      </div>
     </div>
   </section>
 </template>

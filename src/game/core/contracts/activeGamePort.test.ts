@@ -2,6 +2,7 @@ import { ref } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 import { createActiveGamePort, type GameMode } from './activeGamePort'
 import { useGame } from '../local/useGame'
+import { useShandongGame } from '../../variants/shandong/shandongGame'
 
 describe('ActiveGamePort', () => {
   it('switches every state read to the selected adapter without rebuilding consumers', () => {
@@ -58,5 +59,22 @@ describe('ActiveGamePort', () => {
     expect(active).not.toHaveProperty('humanController')
     expect(active).toHaveProperty('startGame')
     expect(active).toHaveProperty('players')
+  })
+
+  it('switches to shandongGame when selectedRule is shandong and starts game', () => {
+    const mode = ref<GameMode>('local')
+    const selectedRule = ref('shandong')
+    const local = useGame()
+    const shandong = useShandongGame()
+    const startSpy = vi.spyOn(shandong, 'startGame').mockImplementation(() => Promise.resolve())
+
+    const active = createActiveGamePort(
+      mode,
+      () => selectedRule.value === 'shandong' ? shandong : local,
+      () => local,
+    )
+
+    active.startGame('east')
+    expect(startSpy).toHaveBeenCalledWith('east')
   })
 })

@@ -13,10 +13,16 @@ export function createLocalTransientEventPresenter(options: LocalTransientEventP
   let tableActionSequence = 0
 
   function announce(text: string, tone = 'gold') {
-    state.announcement.value = { text, tone, id: Date.now() }
+    const id = Date.now()
+    state.announcement.value = { text, tone, id }
     options.later(() => {
-      if (state.announcement.value?.text === text) state.announcement.value = null
+      if (state.announcement.value?.id === id) state.announcement.value = null
     }, 1500)
+    if (typeof window !== 'undefined' && window.setTimeout) {
+      window.setTimeout(() => {
+        if (state.announcement.value?.id === id) state.announcement.value = null
+      }, 1800)
+    }
   }
 
   function showTableAction(

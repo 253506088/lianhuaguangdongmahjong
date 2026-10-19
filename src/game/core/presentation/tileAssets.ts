@@ -1,4 +1,4 @@
-import { TILE_TYPES, tileFaceFile } from '../rules/tiles'
+import { ALL_TILE_TYPES, TILE_TYPES, tileFaceFile } from '../rules/tiles'
 import type { TileType } from '../contracts/types'
 
 // 牌面资产预加载：把全部牌面拉进内存（blob URL + 已解码图片各存一份），
@@ -39,7 +39,7 @@ function themeTileUrl(theme: TileAssetTheme, tile: TileType): string | null {
 
 /** 明确列出主题资源和回退资源，避免 2D/3D 各自拼接路径导致缓存串图。 */
 export function tileAssetManifest(theme: TileAssetTheme = activeTheme): TileAssetManifest {
-  const faces = Object.fromEntries(TILE_TYPES.map((tile) => [
+  const faces = Object.fromEntries(ALL_TILE_TYPES.map((tile) => [
     tile,
     [themeTileUrl(theme, tile) ?? '', legacyTileUrl(tile) ?? ''] as const,
   ])) as Record<TileType, readonly [string, string]>
@@ -158,7 +158,7 @@ export function preloadedTileImages(theme: TileAssetTheme = activeTheme): Map<Ti
 
 /** 2D 牌面 background 用：优先返回内存 blob URL，未就绪时回退网络地址。 */
 export function tileFaceUrl(tile: TileType, theme: TileAssetTheme = activeTheme): string {
-  return cachesFor(theme).urls.get(tile) ?? tileAssetManifest(theme).faces[tile]?.[0] ?? ''
+  return cachesFor(theme).urls.get(tile) ?? tileAssetManifest(theme).faces[tile]?.[0] ?? themeTileUrl(theme, tile) ?? ''
 }
 
 /** 牌背候选地址（图片缺失时由 3D 主题渐变或 CSS 回退兜底）。 */

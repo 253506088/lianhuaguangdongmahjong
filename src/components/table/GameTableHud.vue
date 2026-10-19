@@ -25,6 +25,11 @@ import {
   resolveRoundResultPresentation,
   scoreDirection,
 } from '../../theme/themeEventPresentation'
+import {
+  computeMingLouWaits,
+  computeUnseenTileCount,
+  type MingLouWaitItem,
+} from '../../game/variants/shandong/shandongRules'
 
 const MahjongTable3D = defineAsyncComponent(() => import('../MahjongTable3D.vue'))
 // 预热 3D 牌桌组件 chunk：首次开局时若等挂载才加载，WebGL 场景初始化会
@@ -71,7 +76,9 @@ interface Props {
   autoPlayEnabled?: boolean
   /** 当前是否已开启托管（联机自动出牌/过牌） */
   autoPlay?: boolean
-  rulesetId?: 'lotus-classic' | 'lotus-legacy' | 'lotus-blood-flow'
+  rulesetId?: 'lotus-classic' | 'lotus-legacy' | 'lotus-blood-flow' | 'shandong'
+  userCanMingLou?: boolean
+  shandongJiang?: '258' | 'luan'
   bloodFlow?: BloodFlowTableState | null
   /** 联机（房间）对局：结算页的「退出本场」与暂离文案只在这种模式下有意义。 */
   online?: boolean
@@ -105,6 +112,7 @@ const emit = defineEmits<{
   gang: [tile: TileType]
   hu: []
   windKong: []
+  mingLou: []
   toggleAutoPlay: []
   nextRound: []
   returnToLobby: []
@@ -158,6 +166,38 @@ watch(()=>[props.bloodFlow?.sourceEvent?.id,props.user.drawnTileIndex,props.user
   const b=tile.getBoundingClientRect(),c=canvas.getBoundingClientRect()
   if(c.width&&c.height)ownDrawScreen.value={sourceId:source.id,x:(b.x+b.width/2-c.x)/c.width,y:(b.y+b.height/2-c.y)/c.height}
 },{immediate:true,flush:'post'})
+
+// 吃/碰/杠/胡可操作时的提示音
+watch(() => props.actionPrompt, (prompt) => {
+  if (!prompt) return
+  if (prompt.canPeng || prompt.canGang || (prompt.chiOptions && prompt.chiOptions.length > 0) || prompt.canHu) {
+    effectPlayer?.('didu.ogg', 0.85)
+  }
+})
+watch(() => [props.isUserTurn, props.userKongs?.length ?? 0, props.userCanHu] as const, ([turn, kongs, canHu], prev) => {
+  const prevTurn = prev ? prev[0] : false
+  if (turn && !prevTurn && (kongs > 0 || canHu)) {
+    effectPlayer?.('didu.ogg', 0.85)
+  }
+})
+
+// 计算他人明搂状态下的听牌与剩余张数（他人视角）
+const otherMingLouWaits = computed(() => {
+  const result: Record<number, MingLouWaitItem[]> = {}
+  if (!props.players || !props.user) return result
+  props.players.forEach((p, idx) => {
+    if (idx === 0) return
+    if (!p.isMingLou) return
+    result[idx] = computeMingLouWaits(
+      p,
+      props.user.hand,
+      props.players,
+      props.user.seat,
+      { luanJiang: props.shandongJiang === 'luan' },
+    )
+  })
+  return result
+})
 
 async function handleTableReady() {
   tableLoadRetry.succeed()
@@ -375,26 +415,44 @@ const userDrawnIndex = computed(() => {
   if (rawDrawn >= 0 && rawDrawn < hand.length) return rawDrawn
   return hand.length > baseHand ? hand.length - 1 : -1
 })
+const userFlowerCount = computed(() => (props.user?.melds || []).filter((meld) => meld.type === 'flower').length)
 
 watch(() => props.userDiscardWaits, (value) => { waitsOpen.value = Boolean(value) })
 watch(() => props.isUserTurn, (value) => { if (!value) waitsOpen.value = false })
 watch(() => props.userKongs, (kongs) => { if (!kongs.length) kongPickerOpen.value = false })
 watch(() => props.actionPrompt, () => { chiPickerOpen.value = false })
 
+const hoveredHandIndex = ref<number | null>(null)
+
 function usesFinePointer() {
   return window.matchMedia('(hover: hover) and (pointer: fine)').matches
 }
 
-function previewDesktopWaits(tile: TileType, index: number) {
-  if (!usesFinePointer() || !isTingDiscard(index, tile)) return
-  hoveredDiscard.value = tile
-  waitsOpen.value = true
+function getUnseenCount(tile: TileType): number {
+  if (!props.players?.length || !props.user) return 4
+  return computeUnseenTileCount(tile, props.user.hand, props.players, props.user.seat)
 }
 
-function clearDesktopWaits() {
-  if (!usesFinePointer() || !hoveredDiscard.value) return
-  hoveredDiscard.value = null
-  waitsOpen.value = false
+function handleTileHover(tile: TileType, index: number) {
+  hoveredHandIndex.value = index
+  if (usesFinePointer() && isTingDiscard(index, tile)) {
+    hoveredDiscard.value = tile
+    waitsOpen.value = true
+  }
+}
+
+function handleTileLeave(index?: number) {
+  if (index === undefined || hoveredHandIndex.value === index) {
+    hoveredHandIndex.value = null
+  }
+  if (usesFinePointer() && hoveredDiscard.value) {
+    hoveredDiscard.value = null
+    waitsOpen.value = false
+  }
+}
+
+function isTileHintVisible(index: number) {
+  return hoveredHandIndex.value === index || props.selectedIndex === index
 }
 
 function beginTileGesture(index: number, event: PointerEvent) {
@@ -413,6 +471,7 @@ function finishTileGesture(index: number, event: PointerEvent) {
     suppressTileClickUntil = performance.now() + 500
     lastTouchTap = { index: -1, time: 0 }
     hoveredDiscard.value = null
+    hoveredHandIndex.value = null
     waitsOpen.value = false
     if (!props.bloodFlow?.seats[props.user.seat].locked || index === props.user.drawnTileIndex) emit('discard', index)
   }
@@ -430,12 +489,14 @@ function handleTileActivation(index: number, event?: PointerEvent) {
   const isTouch = event?.pointerType === 'touch' || event?.pointerType === 'pen' || !usesFinePointer()
   if (!isTouch) {
     hoveredDiscard.value = null
+    hoveredHandIndex.value = null
     waitsOpen.value = false
     emit('discard', index)
     return
   }
   if (lastTouchTap.index === index && now - lastTouchTap.time <= 360) {
     lastTouchTap = { index: -1, time: 0 }
+    hoveredHandIndex.value = null
     waitsOpen.value = false
     emit('discard', index)
     return
@@ -596,6 +657,7 @@ function onAvatarError(entry: GamePlayer) {
       :avatar-override="themeName === 'llmAnime' ? animeAvatarForPlayer(player) : undefined"
       :theme-name="themeName"
       :bubble="presentedLlmBubbles?.[index + 1]"
+      :ming-lou-waits="otherMingLouWaits[index + 1]"
     >
       <template v-if="bloodFlow" #footer>
         <button type="button" class="blood-flow-pile-badge" :class="`win-count-${seatPosition[index + 1]}`" :data-pile-seat="player.seat"
@@ -619,6 +681,8 @@ function onAvatarError(entry: GamePlayer) {
     <section class="user-area">
       <div class="user-identity" :class="{ active: currentPlayer === 0, 'action-active': tableActionEvent?.actorIndex === 0 }" :style="userAnimeStyle">
         <span v-if="dealer === 0" class="dealer-badge">庄</span>
+        <span v-if="user.isMingLou" class="minglou-badge" title="明搂">搂</span>
+        <span v-if="userFlowerCount > 0" class="flower-badge" :title="`花牌: ${userFlowerCount}张`">🌸{{ userFlowerCount }}</span>
         <img class="avatar" :src="userAvatar" :alt="`${user.name}头像`" @error="onAvatarError(user)" />
         <div class="player-info"><strong>{{ user.name }}</strong><span>{{ user.score }}</span></div>
         <button v-if="bloodFlow" type="button" class="blood-flow-pile-badge win-count-bottom" :data-pile-seat="user.seat"
@@ -646,15 +710,29 @@ function onAvatarError(entry: GamePlayer) {
       <div class="hand-rack" :class="{ playable: isUserTurn, dealing: phase === 'dealing', 'has-melds': user.melds.length }">
         <div
           v-for="(tile, index) in displayedUserHand" :key="`${tile}-${index}`" class="hand-tile-slot"
-          :class="{ drawn: userDrawnIndex === index, 'ting-discard': isTingDiscard(index, tile), 'reform-discard': isReformDiscard(index, tile) }"
-          @mouseenter="previewDesktopWaits(tile, index)" @mouseleave="clearDesktopWaits"
+          :class="{
+            drawn: userDrawnIndex === index,
+            'ting-discard': isTingDiscard(index, tile),
+            'reform-discard': isReformDiscard(index, tile),
+            selected: selectedIndex === index,
+          }"
+          :title="`${tileName(tile)}：场外未现剩余 ${getUnseenCount(tile)} 张`"
+          @mouseenter="handleTileHover(tile, index)" @mouseleave="handleTileLeave(index)"
           @pointerdown.stop="beginTileGesture(index, $event)" @pointerup.stop="finishTileGesture(index, $event)" @pointercancel="cancelTileGesture"
         >
           <span class="hand-hit-area" aria-hidden="true"></span>
-          <span v-if="isTingDiscard(index, tile) && !isReformDiscard(index, tile)" class="ting-arrow" aria-hidden="true"></span>
-          <span v-if="isReformDiscard(index, tile)" class="ting-arrow reform-arrow" aria-hidden="true"></span>
+          <span v-if="isTingDiscard(index, tile) && !isReformDiscard(index, tile)" class="ting-arrow" :class="{ 'with-unseen': isTileHintVisible(index) }" aria-hidden="true"></span>
+          <span v-if="isReformDiscard(index, tile)" class="ting-arrow reform-arrow" :class="{ 'with-unseen': isTileHintVisible(index) }" aria-hidden="true"></span>
           <span v-if="isReformDiscard(index, tile)" class="reform-badge" aria-hidden="true">改</span>
           <MahjongTile :tile="tile" :joker-tiles="jokerTiles" :wildcard-tiles="wildcardTiles" :theme-name="themeName" :selected="selectedIndex === index" :drawn="userDrawnIndex === index" :disabled="!isUserTurn || Boolean(bloodFlow?.seats[user.seat].locked && index !== userDrawnIndex)" @choose="handleTileActivation(index, $event)" />
+          <span
+            v-if="isTileHintVisible(index)"
+            class="tile-unseen-badge"
+            :class="{ exhausted: getUnseenCount(tile) === 0 }"
+            aria-label="场面未现剩余张数"
+          >
+            剩<em>{{ getUnseenCount(tile) }}</em>张
+          </span>
         </div>
       </div>
     </section>
@@ -693,6 +771,7 @@ function onAvatarError(entry: GamePlayer) {
           <button v-if="!bloodFlow || !bloodFlow.seats[user.seat].locked" class="action pass" data-action-role="danger" @click="$emit('pass')"><b>过</b></button>
         </template>
         <template v-else>
+          <button v-if="userCanMingLou" class="action primary minglou-btn" data-action-role="primary" @click="$emit('mingLou')"><b>明搂</b></button>
           <button v-if="userKongs.length" class="action primary" data-action-role="primary" @click="toggleKongPicker"><b>{{ kongPickerOpen ? '取消' : '杠' }}</b></button>
           <button v-if="userHasWindKong" class="action primary" data-action-role="primary" @click="$emit('windKong')"><b>风杠</b></button>
           <button v-if="userCanHu" class="action hu" data-action-role="major" @click="$emit('hu')"><b>胡</b></button>

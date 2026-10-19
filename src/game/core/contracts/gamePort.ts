@@ -128,6 +128,7 @@ export interface GameCapabilities {
   bloodFlow?: BloodFlowTableState | null
   chi?: { choose(optionIndex: number): void }
   windKong?: { available: boolean; execute(): void }
+  mingLou?: { available: boolean; execute(): void }
   lotusTable?: {
     flipTile: TileType | null
     jokerTiles: TileType[]

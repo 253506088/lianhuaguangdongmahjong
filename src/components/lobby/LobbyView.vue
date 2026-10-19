@@ -22,6 +22,7 @@ interface Props {
   gameMode: GameMode
   selectedMatch: MatchType
   selectedRule: RuleVariant
+  shandongJiang?: '258' | 'luan'
   matchName: string
   roomId: string
   nicknameInput: string
@@ -50,6 +51,7 @@ const emit = defineEmits<{
   'update:gameMode': [value: GameMode]
   'update:selectedMatch': [value: MatchType]
   'update:selectedRule': [value: RuleVariant]
+  'update:shandongJiang': [value: '258' | 'luan']
   'update:nicknameInput': [value: string]
   'update:joinCode': [value: string]
   'update:animeCharacterId': [value: CharacterId]
@@ -76,6 +78,20 @@ const matchOption = computed(() => props.selectedMatch === 'east'
   ? { name: '东风场', description: '一场 4 局' }
   : { name: '半庄场', description: '一场 8 局' })
 const ruleOption = computed(() => getRuleVariant(props.selectedRule))
+const ruleDescription = computed(() => {
+  if (props.selectedRule === 'shandong') {
+    const jiang = props.shandongJiang === 'luan' ? '乱将' : '258掌将'
+    return `${jiang} · 144张牌（含花） · 明搂`
+  }
+  return ruleOption.value.highlights.slice(0, 2).join(' · ')
+})
+const startButtonRuleText = computed(() => {
+  if (props.selectedRule === 'shandong') {
+    const jiang = props.shandongJiang === 'luan' ? '乱将' : '258掌将'
+    return `${ruleOption.value.name}（${jiang}）`
+  }
+  return ruleOption.value.name
+})
 const dialogTitle = computed(() => ({
   create: '创建房间',
   join: '加入房间',
@@ -99,8 +115,11 @@ function selectMatch(value: MatchType) {
   closePicker()
 }
 
-function selectRule(value: RuleVariant) {
+function selectRule(value: RuleVariant, jiang?: '258' | 'luan') {
   emit('update:selectedRule', value)
+  if (jiang) {
+    emit('update:shandongJiang', jiang)
+  }
   closePicker()
 }
 
@@ -148,11 +167,11 @@ function closeDialog() {
             :match-name="matchOption.name"
             :match-description="matchOption.description"
             :rule-name="ruleOption.name"
-            :rule-description="ruleOption.highlights.slice(0, 2).join(' · ')"
+            :rule-description="ruleDescription"
             @select-match="openPicker('match')"
             @select-rule="openPicker('rule')"
           />
-          <button class="start-button" data-action-role="primary" @click="$emit('startLocal')"><b>开始{{ matchOption.name }}</b><span>{{ ruleOption.name }} · 四人对局</span></button>
+          <button class="start-button" data-action-role="primary" @click="$emit('startLocal')"><b>开始{{ matchOption.name }}</b><span>{{ startButtonRuleText }} · 四人对局</span></button>
         </template>
 
         <div v-else class="remote-lobby">
@@ -230,7 +249,7 @@ function closeDialog() {
           :match-name="matchOption.name"
           :match-description="matchOption.description"
           :rule-name="ruleOption.name"
-          :rule-description="ruleOption.highlights.slice(0, 2).join(' · ')"
+          :rule-description="ruleDescription"
           @select-match="openPicker('match', true)"
           @select-rule="openPicker('rule', true)"
         />
@@ -266,7 +285,15 @@ function closeDialog() {
       />
 
       <MatchTypePicker v-else-if="dialog === 'match'" :model-value="selectedMatch" @close="closePicker" @confirm="selectMatch" />
-      <RuleVariantPicker v-else :model-value="selectedRule" :allow-blood-flow="bloodFlowEnabled(gameMode === 'local' ? 'local' : 'p2p')" @close="closePicker" @confirm="selectRule" @view-rules="viewRules" />
+      <RuleVariantPicker
+        v-else
+        :model-value="selectedRule"
+        :shandong-jiang="shandongJiang"
+        :allow-blood-flow="bloodFlowEnabled(gameMode === 'local' ? 'local' : 'p2p')"
+        @close="closePicker"
+        @confirm="selectRule"
+        @view-rules="viewRules"
+      />
     </LobbyDialog>
 
   </section>

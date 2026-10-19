@@ -6,13 +6,15 @@
 import { getVibeClient } from './vibeClient'
 import type { TableThemeName } from '../../../components/table/three/tableTheme'
 
+import type { RuleVariant } from '../../core/rules/ruleVariants'
+
 // 6 位房间码字母表：去掉易混淆字符（0/O、1/I、U），与旧后端一致。
 const ROOM_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
 const ROOM_CODE_LENGTH = 6
 
 export interface RoomConfig {
   mode: 'east' | 'hanchan'
-  rulesetId: 'lotus-classic' | 'lotus-legacy' | 'lotus-blood-flow'
+  rulesetId: RuleVariant
   capacity: number
   tableThemeName?: TableThemeName
 }

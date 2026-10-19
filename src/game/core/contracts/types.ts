@@ -2,7 +2,8 @@ export type Suit = 'm' | 'p' | 's'
 export type Rank = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9
 export type SuitedTile = `${Suit}${Rank}`
 export type HonorTile = 'east' | 'south' | 'west' | 'north' | 'red' | 'green' | 'white'
-export type TileType = SuitedTile | HonorTile
+export type FlowerTile = 'f1' | 'f2' | 'f3' | 'f4' | 'f5' | 'f6' | 'f7' | 'f8'
+export type TileType = SuitedTile | HonorTile | FlowerTile
 export type MatchType = 'east' | 'hanchan'
 
 export interface Meld {
@@ -34,6 +35,7 @@ export interface GamePlayer {
   melds: Meld[]
   redCount: number
   drawnTileIndex: number
+  isMingLou?: boolean
 }
 
 export type TableActionType =
@@ -82,6 +84,9 @@ export interface EndGameOptions {
   winTile?: TileType
   /** 点炮胡的弃牌来源座位；自摸/抢杠胡不设置。 */
   sourceFrom?: number
+  selfDraw?: boolean
+  tianhu?: boolean
+  dihu?: boolean
   fourRed?: boolean
   kongBloom?: boolean
   robbedKong?: boolean

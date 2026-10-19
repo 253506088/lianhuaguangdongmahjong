@@ -61,6 +61,9 @@ export function createRulePlayerSelectors(options: RuleSelectorOptions) {
     players.forEach((player) => {
       visible += options.matchingCount(player.discards, tile)
       player.melds.forEach((meld) => { visible += options.matchingCount(meld.tiles, tile) })
+      if (player.isMingLou && player !== user.value && player.seat !== user.value?.seat) {
+        visible += options.matchingCount(player.hand, tile)
+      }
     })
     return Math.max(0, 4 - visible)
   }

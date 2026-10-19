@@ -439,6 +439,61 @@ button { font: inherit; }
 .player-info strong { max-width: 118px; overflow: hidden; color: var(--theme-text); font-size: clamp(13px, 1.1vw, 18px); font-weight: 700; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 3px #000; }
 .player-info span { color: var(--theme-accent-text); font-size: clamp(13px, 1vw, 17px); font-weight: 700; text-shadow: 0 1px 3px #000; }
 .dealer-badge { position: absolute; z-index: 4; top: -7px; left: -5px; display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: #b8272f; color: white; font: 700 11px serif; box-shadow: 0 1px 5px #000; }
+.minglou-badge { position: absolute; z-index: 4; bottom: -7px; left: -5px; display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: #d97706; color: white; font: 700 11px sans-serif; box-shadow: 0 1px 5px #000; }
+.flower-badge { position: absolute; z-index: 4; top: -7px; right: -5px; display: inline-flex; align-items: center; gap: 2px; padding: 1px 5px; border-radius: 10px; background: rgba(219, 39, 119, 0.85); color: white; font: 700 11px sans-serif; box-shadow: 0 1px 5px #000; white-space: nowrap; }
+.minglou-waits-card {
+  position: absolute;
+  z-index: 15;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px;
+  border-radius: 8px;
+  background: rgba(15, 17, 23, 0.95);
+  border: 1px solid rgba(245, 158, 11, 0.85);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.waits-top { top: 100%; left: 50%; transform: translateX(-50%); margin-top: 4px; }
+.waits-right { right: 100%; top: 50%; transform: translateY(-50%); margin-right: 8px; }
+.waits-left { left: 100%; top: 50%; transform: translateY(-50%); margin-left: 8px; }
+.minglou-waits-label {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  background: linear-gradient(135deg, #d97706, #b45309);
+  color: #fff;
+  font: 800 11px sans-serif;
+  flex-shrink: 0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+}
+.minglou-waits-list {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.minglou-wait-tile {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.minglou-wait-remain {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fde68a;
+  line-height: 1;
+}
+.minglou-wait-tile.exhausted {
+  opacity: 0.45;
+}
+.minglou-wait-tile.exhausted .minglou-wait-remain {
+  color: #9ca3af;
+}
 .turn-dot { position: absolute; right: -5px; width: 9px; height: 9px; border-radius: 50%; background: var(--theme-accent); box-shadow: 0 0 9px var(--theme-accent); animation: pulse 1s infinite; }
 .player-seat.active .avatar-wrap { border-color: var(--theme-accent); box-shadow: 0 0 16px color-mix(in srgb, var(--theme-accent) 32%, transparent); }
 
@@ -581,6 +636,83 @@ button { font: inherit; }
   pointer-events: none;
   transform: translateX(-50%);
   animation: ting-arrow-bob .85s ease-in-out infinite alternate;
+  transition: bottom .15s ease;
+}
+.ting-arrow.with-unseen {
+  bottom: calc(100% + 38px);
+}
+.hand-tile-slot.selected .ting-arrow.with-unseen {
+  bottom: calc(100% + 45px);
+}
+/* 鼠标悬停手牌/选中时提示未现剩余张数 */
+.tile-unseen-badge {
+  position: absolute;
+  z-index: 10;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2px 7px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--theme-panel, #0e2018) 92%, #000);
+  border: 1px solid color-mix(in srgb, var(--theme-accent, #f4cb63) 78%, transparent);
+  color: var(--theme-accent-text, #fff4d0);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), 0 0 8px color-mix(in srgb, var(--theme-accent, #f4cb63) 30%, transparent);
+  font-size: clamp(10px, 1.05vw, 12px);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  pointer-events: none;
+  user-select: none;
+  animation: unseen-badge-pop .18s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
+  transition: bottom .15s ease;
+}
+.tile-unseen-badge em {
+  font-style: normal;
+  font-weight: 900;
+  font-size: 1.18em;
+  color: var(--theme-accent, #ffd86b);
+  margin: 0 1px;
+}
+.tile-unseen-badge::after {
+  content: "";
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 4px;
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--theme-accent, #f4cb63) 78%, transparent) transparent transparent transparent;
+}
+.tile-unseen-badge.exhausted {
+  background: linear-gradient(135deg, rgba(42, 15, 15, 0.96), rgba(22, 6, 6, 0.98));
+  border-color: rgba(235, 87, 87, 0.8);
+  color: #ffe0de;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), 0 0 8px rgba(235, 87, 87, 0.35);
+}
+.tile-unseen-badge.exhausted em {
+  color: #ff6e61;
+}
+.tile-unseen-badge.exhausted::after {
+  border-color: rgba(235, 87, 87, 0.8) transparent transparent transparent;
+}
+.hand-tile-slot:hover .tile-unseen-badge {
+  bottom: calc(100% + 18px);
+}
+.hand-tile-slot.selected .tile-unseen-badge {
+  bottom: calc(100% + 25px);
+}
+@keyframes unseen-badge-pop {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 4px) scale(0.85);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
 }
 .hand-rack.dealing .mahjong-tile { animation: deal-to-user .23s cubic-bezier(.2,.85,.3,1) both; }
 .hand-rack::after { content: ""; position: absolute; right: 4%; bottom: -13px; left: 4%; height: 5px; border-radius: 50%; background: rgba(0,0,0,.38); filter: blur(3px); }
@@ -701,6 +833,10 @@ button { font: inherit; }
 .picker-options b { color: #eadbb7; font: 800 17px "Noto Serif SC", serif; }
 .picker-options b em { margin-left: 7px; padding: 2px 7px; border: 1px solid rgba(211,174,87,.45); border-radius: 9px; color: #dcb75f; font: 10px sans-serif; font-style: normal; vertical-align: 2px; }
 .picker-options small { margin-top: 5px; overflow: hidden; color: #91a399; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
+.shandong-sub-options { display: flex; gap: 8px; margin-top: 8px; }
+.sub-option-btn { display: inline-flex; align-items: center; justify-content: center; padding: 4px 11px; border: 1px solid rgba(211,174,87,.32); border-radius: 4px; background: rgba(255,255,255,.06); color: #cfc3a5; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s ease; user-select: none; }
+.sub-option-btn:hover { border-color: rgba(211,174,87,.65); background: rgba(255,255,255,.12); color: #fff; }
+.sub-option-btn.active { border-color: #d5ab54; background: linear-gradient(135deg, rgba(213,171,84,.38), rgba(185,135,55,.55)); color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
 .dialog-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 20px; }
 .dialog-actions button { min-width: 92px; padding: 9px 16px; border-radius: 5px; font-weight: 800; cursor: pointer; }
 .dialog-actions .secondary { border: 1px solid rgba(213,184,112,.38); background: rgba(5,23,16,.8); color: #cfc3a5; }
@@ -1008,6 +1144,11 @@ button { font: inherit; }
   .hand-rack { min-height: 72px; padding: 5px 8px 4px; }
   .hand-rack .mahjong-tile { --tile-width: clamp(32px, 4.25vw, 38px); }
   .hand-rack .hand-tile-slot.drawn { margin-left: clamp(8px, 1.5cqh, 14px); }
+  .tile-unseen-badge { padding: 1px 4px; font-size: 9px; }
+  .hand-tile-slot:hover .tile-unseen-badge { bottom: calc(100% + 14px); }
+  .hand-tile-slot.selected .tile-unseen-badge { bottom: calc(100% + 20px); }
+  .ting-arrow.with-unseen { bottom: calc(100% + 30px); }
+  .hand-tile-slot.selected .ting-arrow.with-unseen { bottom: calc(100% + 36px); }
   .user-melds { bottom: 75px; }
   /* 本家卡的 width/padding/scale 由新版共享块覆盖；此处 72px 遗留规则会把本家卡
      压得比三家座位卡窄，造成四家尺寸不一致（R6.19 移除）。 */
@@ -3481,6 +3622,9 @@ button { font: inherit; }
 .lobby-dialog-backdrop[data-table-theme] .picker-options small,
 .lobby-dialog-backdrop[data-table-theme] .dialog-hint { color: var(--theme-text-muted); }
 .lobby-dialog-backdrop[data-table-theme] .picker-options b em { border-color: color-mix(in srgb, var(--theme-accent) 52%, transparent); color: var(--theme-accent-text); }
+.lobby-dialog-backdrop[data-table-theme] .sub-option-btn { border-color: color-mix(in srgb, var(--theme-border) 40%, transparent); background: color-mix(in srgb, var(--theme-panel) 80%, transparent); color: var(--theme-text-muted); }
+.lobby-dialog-backdrop[data-table-theme] .sub-option-btn:hover { border-color: var(--theme-accent); color: var(--theme-text); }
+.lobby-dialog-backdrop[data-table-theme] .sub-option-btn.active { border-color: var(--theme-accent); background: var(--theme-accent); color: var(--theme-button-text, #fff); }
 .lobby-dialog-backdrop[data-table-theme] .view-rules-link { color: var(--theme-accent-text); }
 .lobby-dialog-backdrop[data-table-theme] .dialog-actions .primary { border-color: var(--theme-border); background: var(--theme-button); color: var(--theme-button-text); box-shadow: 0 7px 20px rgba(0,0,0,.26); }
 .lobby-dialog-backdrop[data-table-theme] .dialog-actions .secondary { border-color: color-mix(in srgb, var(--theme-border) 38%, transparent); background: color-mix(in srgb, var(--theme-panel) 88%, transparent); color: var(--theme-text-muted); }
