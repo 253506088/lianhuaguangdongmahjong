@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { TILE_TYPES } from '../rules/tiles'
+import { ALL_TILE_TYPES, TILE_TYPES } from '../rules/tiles'
 
 const NativeURL = globalThis.URL
 
@@ -82,7 +82,7 @@ describe('tile asset preload', () => {
   it('publishes an explicit llmAnime manifest with a per-tile default fallback', async () => {
     const { tileAssetManifest, tileBackUrl } = await import('./tileAssets')
     const manifest = tileAssetManifest('llmAnime')
-    expect(Object.keys(manifest.faces)).toHaveLength(TILE_TYPES.length)
+    expect(Object.keys(manifest.faces)).toHaveLength(ALL_TILE_TYPES.length)
     expect(manifest.faces.m1).toEqual(['/themes/llm-anime/v1/tiles/1m.png', '/tiles/1m.png'])
     expect(manifest.faces.white).toEqual(['/themes/llm-anime/v1/tiles/7z.png', '/tiles/7z.png'])
     expect(manifest.back).toEqual(['/themes/llm-anime/v1/tile-back.png', '/tiles/tile-back.png'])

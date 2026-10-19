@@ -610,6 +610,7 @@ watch(
     player.hand.length,
     player.concealedTileCount,
     player.drawnTileIndex,
+    player.isMingLou,
     player.discards.join(','),
     player.melds.map((meld) => `${meld.type}:${meld.from ?? '-'}:${meld.tiles.join(',')}`).join('|'),
   ]).flat() as unknown[]).concat(

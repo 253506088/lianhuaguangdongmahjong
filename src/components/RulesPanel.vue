@@ -33,6 +33,19 @@ const legacyPaymentExamples = [
 const windKongDescription = '东南西北各一张，须全部位于本人未副露手牌中，在本人摸牌后的回合一次声明，四张亮明并补摸。风杠本身不破门清，不可抢杠；已吃出的乱风顺不能补成风杠，也不能借他家弃牌开四风杠。'
 
 const rules = computed(() => {
+  if (props.variant === 'shandong') {
+    return [
+      ['多端兼容', '电脑端：鼠标单击出牌、移动端：手机双击出牌或上滑出牌'],
+      ['144张牌', '万筒条108张 + 风字牌28张 + 春夏秋冬梅兰竹菊8张花牌。4人对局，可吃（仅下家）、可碰、可杠。'],
+      ['单响截胡', '可自摸或点炮胡牌。不能一炮多响，多人可胡时按出牌者逆时针距离最近者截胡。'],
+      ['258掌将', '除特殊牌型（花胡、风一色、将一色、十三不靠、十三幺）外，所有牌型（平胡、碰碰胡、混一色、清一色、七对、一条龙、大吊车等）必须有 2、5、8 做将对。'],
+      ['明搂加倍', '听牌后可选择明搂：亮明手牌，输赢翻倍（×2）。明搂后不可换牌，只能自摸胡牌（不可点炮胡）。明搂输家付分也翻倍。'],
+      ['过圈限制', '过胡过圈：放弃点炮后在下次摸牌前不可点炮胡；过碰过圈：同一圈放弃碰后在下次摸牌前不可碰同一张牌。'],
+      ['花分计算', '仅胡牌玩家计花分：底分固定1花、花牌1花/个、字明刻/暗刻1花/个、数牌明杠/补杠1花/个、数牌暗杠2花/个、字明杠/补杠2花/个、字暗杠3花/个。'],
+      ['番型倍数', '平胡×1，花胡/大吊车/碰碰胡/混一色/门清/海底捞月/七对×2，一条龙/清一色/豪华七对×4，风一色/将一色×6，双豪华七对×8，十三不靠×12，超豪华七对/十三幺×16，地胡×25，天胡×30。'],
+      ['结算公式', '胡牌分 = 花分 × 番型倍数 × 底分（天地胡固定倍数必胡）。点炮者全包，自摸三家各付；明搂者赢输均加倍。'],
+    ]
+  }
   if (props.variant === 'lotus-blood-flow') return [
     ['血流到底', '首胡后锁定暗手和副露，可继续胡牌；摸牌不胡时只能摸切。牌墙耗尽且最后响应完成才结束本局。'],
     ['翻精与硬胡', '两次掷骰、双精、白板受限替代。每次胡按完整副露和胡牌张重新判型；完全按真实牌面成立为硬胡 ×2。'],
@@ -72,8 +85,12 @@ const rules = computed(() => {
   ]
 })
 
-const panelTitle = computed(() => props.variant === 'lotus-blood-flow' ? '莲花麻将·血流玩法' : props.variant === 'lotus-legacy' ? '莲花麻将玩法' : '莲花广麻玩法')
-const baseNote = computed(() => props.variant === 'lotus-blood-flow' ? `底分 ${BLOOD_FLOW_CONFIG.basePoints} · 单家每次最多 ${BLOOD_FLOW_CONFIG.basePoints * BLOOD_FLOW_CONFIG.maxMultiplierPerPayer} 分 · 牌墙耗尽结束本局` : props.variant === 'lotus-legacy'
+const panelTitle = computed(() => props.variant === 'shandong' ? '山东麻将玩法' : props.variant === 'lotus-blood-flow' ? '莲花麻将·血流玩法' : props.variant === 'lotus-legacy' ? '莲花麻将玩法' : '莲花广麻玩法')
+const baseNote = computed(() => props.variant === 'shandong'
+  ? '基础分 100 分 · 胡牌分 = 花分 × 番型倍数 × 底分 · 天地胡固定倍数必胡'
+  : props.variant === 'lotus-blood-flow'
+  ? `底分 ${BLOOD_FLOW_CONFIG.basePoints} · 单家每次最多 ${BLOOD_FLOW_CONFIG.basePoints * BLOOD_FLOW_CONFIG.maxMultiplierPerPayer} 分 · 牌墙耗尽结束本局`
+  : props.variant === 'lotus-legacy'
   ? `基础单位 ${BASE_SCORE} 分 · 番数×底分，按身份收付`
   : `基础分 ${BASE_SCORE} 分 · 总分 = 底分 × 倍数 + 中马数 × 底分 + 红中数 × 底分`)
 </script>

@@ -13,6 +13,8 @@ import ReplayListView from './components/replay/ReplayListView.vue'
 import { useGame } from './game/variants/guangma/game'
 import { useLotusGame } from './game/variants/lotus/lotusGame'
 import { useBloodFlowGame } from './game/variants/lotus/bloodFlow/useBloodFlowGame'
+import { useShandongGame } from './game/variants/shandong/shandongGame'
+import { readRuleVariantPreference, saveRuleVariantPreference, readShandongJiangPreference, saveShandongJiangPreference } from './game/core/rules/rulePreference'
 import { useBloodFlowRemoteGame } from './game/variants/lotus/bloodFlow/useBloodFlowRemoteGame'
 import { bloodFlowEnabled } from './game/variants/lotus/bloodFlow/availability'
 import { BLOOD_FLOW_CONFIG } from './game/variants/lotus/bloodFlow/config'
@@ -71,7 +73,10 @@ const robotIconUrl = `${import.meta.env.BASE_URL}img/robot.svg`
 const rulesOpen = ref(false)
 const resultVisible = ref(true)
 const selectedMatch = ref<MatchType>('east')
-const selectedRule = ref<RuleVariant>(DEFAULT_RULE_VARIANT)
+const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)
+const shandongJiang = ref<'258' | 'luan'>(readShandongJiangPreference())
+watch(selectedRule, saveRuleVariantPreference)
+watch(shandongJiang, saveShandongJiangPreference)
 const gameTableReady = ref(false)
 let tableReadyPromise: Promise<void> | null = null
 let tableReadyResolve: (() => void) | null = null
@@ -288,6 +293,16 @@ const lotusGame = useLotusGame({
   analysis: analysis.port,
   analysisSink: lotusLegacyAnalysisSink,
 })
+const shandongGame = useShandongGame({
+  playSound: playEffect,
+  playSoundAndWait: playEffectAndWait,
+  countdownEnabled: false,
+  aiPlayerSeeds: localLlmSeeds,
+  humanPlayerSeed: localHumanSeed,
+  getTableThemeName: () => tableThemeName.value,
+  animeFixedTts: localAnimeFixedTts,
+  getJiangRule: () => shandongJiang.value,
+})
 const remoteGame = useRemoteGame({
   playSound: playEffect,
   playSoundAndWait: playEffectAndWait,
@@ -328,7 +343,7 @@ watch(() => activeRemote.value.rulesetId.value, (value) => {
 // local 槽按所选玩法解析到「莲花广麻」或「莲花麻将」本地引擎。
 const game = createActiveGamePort(
   gameMode,
-  () => selectedRule.value === 'lotus-blood-flow' ? bloodFlowGame : usesLotusLocalEngine.value ? lotusGame : localGame,
+  () => selectedRule.value === 'shandong' ? shandongGame : selectedRule.value === 'lotus-blood-flow' ? bloodFlowGame : usesLotusLocalEngine.value ? lotusGame : localGame,
   () => activeRemote.value as GamePort,
 )
 
@@ -344,6 +359,8 @@ const {
 // 莲花麻将专属：翻精指示牌 / 癞子集合 / 3D 牌山断点（仅本地莲花麻将模式有意义）。
 const lotusTable = computed(() => capabilities.value.lotusTable)
 const userHasWindKong = computed(() => capabilities.value.windKong?.available ?? false)
+const userCanMingLou = computed(() => capabilities.value.mingLou?.available ?? false)
+const userMingLou = () => capabilities.value.mingLou?.execute()
 const userChi = (optionIndex: number) => capabilities.value.chi?.choose(optionIndex)
 const userWindKong = () => capabilities.value.windKong?.execute()
 const flipTile = computed(() => lotusTable.value?.flipTile ?? null)
@@ -351,6 +368,7 @@ const flipTile = computed(() => lotusTable.value?.flipTile ?? null)
 // 联机 lotus-classic 快照不下发精牌（jokerTiles 为空数组），需兜底为白板癞子，
 // 否则多人模式下白板无「癞」标记。莲花麻将（lotus-legacy）的精牌由快照下发，不受影响。
 const jokerTiles = computed<TileType[]>(() => {
+  if (gameMode.value === 'local' && selectedRule.value === 'shandong') return []
   const jokers = lotusTable.value?.jokerTiles
   return jokers && jokers.length ? jokers : ['white']
 })
@@ -790,6 +808,8 @@ function changeTableTheme(theme: TableThemeName) {
         :user-discard-waits="userDiscardWaits"
         :user-kongs="userKongs"
         :user-has-wind-kong="userHasWindKong"
+        :user-can-ming-lou="userCanMingLou"
+        :shandong-jiang="shandongJiang"
         :auto-play-enabled="gameMode === 'remote'"
         :auto-play="remoteAutoPlay"
         :llm-bubbles="llmBubbles"
@@ -813,6 +833,7 @@ function changeTableTheme(theme: TableThemeName) {
         @gang="userGang"
         @hu="userHu"
         @wind-kong="userWindKong"
+        @ming-lou="userMingLou"
         @toggle-auto-play="toggleAutoPlay"
         @ready="handleTableReady"
         @next-round="nextRound"
@@ -826,6 +847,7 @@ function changeTableTheme(theme: TableThemeName) {
         @update:game-mode="onGameModeChange"
         v-model:selected-match="selectedMatch"
         v-model:selected-rule="selectedRule"
+        v-model:shandong-jiang="shandongJiang"
         v-model:nickname-input="nicknameInput"
         v-model:join-code="joinCode"
         v-model:anime-character-id="animeCharacterId"

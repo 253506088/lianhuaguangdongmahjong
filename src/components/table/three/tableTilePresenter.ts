@@ -96,12 +96,13 @@ function addConcealedHand(playerIndex) {
     ? props.winPresentation
     : null
   const displayedHand = splitWinningTile(rawHand, presentation).hand
+  const isSeatRevealed = props.revealHands || Boolean(props.players[playerIndex]?.isMingLou)
   // 赢家：和牌张已移入胡牌区（splitWinningTile 移除），暗手按 split 后的张数显示，
   // 避免结算快照的 concealedTileCount（含和牌）让和牌在暗手与胡牌区重复出现（对齐单机）。
   const concealedCount = presentation
     ? displayedHand.length
     : (props.players[playerIndex]?.concealedTileCount ?? displayedHand.length)
-  const total = Math.min(props.revealHands ? displayedHand.length : concealedCount, 14)
+  const total = Math.min(isSeatRevealed ? displayedHand.length : concealedCount, 14)
   const gap = TILE_GAP_OFFSET // 三家手牌间隙
   // 摸牌位：只要手牌比基准（13 - 3×非花副露数）多出一张，就把多出的那张视为「摸牌」并留间隙。
   // drawnTileIndex 有效时用它；否则取末张（本地/服务端都把摸的牌放在末尾）。
@@ -111,11 +112,11 @@ function addConcealedHand(playerIndex) {
   const drawnTileIndex = rawDrawn >= 0 && rawDrawn < total
     ? rawDrawn
     : (displayedHand.length > baseHand ? displayedHand.length - 1 : -1)
-  const layoutDrawnTileIndex = props.revealHands ? -1 : drawnTileIndex
+  const layoutDrawnTileIndex = isSeatRevealed ? -1 : drawnTileIndex
   const drawnGap = .28
   const arrangedTotal = layoutDrawnTileIndex >= 0 ? total - 1 : total
-  const melds = props.players[playerIndex]?.melds || []
-  const revealedHand = props.revealHands ? sortTilesWithJokers(displayedHand, props.jokerTiles) : []
+  const melds = (props.players[playerIndex]?.melds || []).filter((m) => m.type !== 'flower')
+  const revealedHand = isSeatRevealed ? sortTilesWithJokers(displayedHand, props.jokerTiles) : []
   // 牌面按每位玩家自身视角从左到右排列；副露固定在右手边，因此邻近副露的是字牌。
   const reverseRevealedFaces = position === 'top' || position === 'right' || melds.length > 0
   const exposedSpan = melds.reduce((span, meld, meldIndex) => {
@@ -135,8 +136,8 @@ function addConcealedHand(playerIndex) {
 
   for (let index = 0; index < total; index += 1) {
     const faceIndex = reverseRevealedFaces ? total - 1 - index : index
-    const face = props.revealHands ? revealedHand[faceIndex] : null
-    const tileY = props.revealHands ? .28 : .56
+    const face = isSeatRevealed ? revealedHand[faceIndex] : null
+    const tileY = isSeatRevealed ? .28 : .56
     let x
     let z
     let rotationY
@@ -154,9 +155,9 @@ function addConcealedHand(playerIndex) {
       // 对家固定使用远端后场，避免中后局牌河向后扩展时覆盖暗牌。
       // 对家手牌离远墙 1.21（与上家/下家手牌离墙距离一致）；副露在手牌前方（墙侧），副露时手牌变短、x 向不重叠。
       z = -9.53
-      rotationY = props.revealHands ? Math.PI : 0
+      rotationY = isSeatRevealed ? Math.PI : 0
     } else {
-      rotationY = props.revealHands
+      rotationY = isSeatRevealed
         ? (position === 'left' ? -Math.PI / 2 : Math.PI / 2)
         : (position === 'left' ? Math.PI / 2 : -Math.PI / 2)
       x = concealedSideX(position === 'left' ? 3 : 1)
@@ -179,10 +180,10 @@ function addConcealedHand(playerIndex) {
       }
     }
     const pos = new THREE.Vector3(x, tileY, z + TILE_LAYER_Z)
-    if(index===drawnTileIndex)drawnTransforms.set(playerIndex,{x:pos.x,y:pos.y,z:pos.z,rotation:rotationY,tilt:props.revealHands?0:-Math.PI/2})
+    if(index===drawnTileIndex)drawnTransforms.set(playerIndex,{x:pos.x,y:pos.y,z:pos.z,rotation:rotationY,tilt:isSeatRevealed?0:-Math.PI/2})
     // 暗手为背面朝玩家的立牌：makeHiddenTile 内部 body 绕 X 转 -90°，合批时折进实例矩阵。
     const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, rotationY, 0))
-    if (!props.revealHands) quat.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)))
+    if (!isSeatRevealed) quat.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI / 2, 0, 0)))
     const motionKey = `deal:${props.dealAnimation.serial}:${playerIndex}:${index}`
     const continuing = continuingDeals.get(motionKey)
     if (dealThisHand && index >= animatedFromIndex && (pendingDealAnimation || continuing)) {
@@ -203,7 +204,7 @@ function addConcealedHand(playerIndex) {
       })
     } else {
       const instance = addTableTile(pos, quat, face)
-      if (import.meta.env.DEV && props.revealHands) handFaceInstances.push({ seat: playerIndex, instance })
+      if (import.meta.env.DEV && isSeatRevealed) handFaceInstances.push({ seat: playerIndex, instance })
     }
   }
 }
@@ -300,6 +301,7 @@ function addMelds(playerIndex) {
   const melds = props.players[playerIndex]?.melds || []
   let trackOffset = 0
   melds.forEach((meld, meldIndex) => {
+    if (meld.type === 'flower') return
     const motionPrefix = `meld:${playerIndex}:${meldIndex}:${meld.type}:${meld.tiles.join(',')}`
     const animatesThisMeld = pendingTableActionAnimation?.actorIndex === playerIndex
       && pendingTableActionAnimation?.meldIndex === meldIndex

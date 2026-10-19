@@ -1,4 +1,4 @@
-export type RuleVariant = 'lotus-classic' | 'lotus-legacy' | 'lotus-blood-flow'
+export type RuleVariant = 'lotus-classic' | 'lotus-legacy' | 'lotus-blood-flow' | 'shandong'
 
 export interface RuleVariantOption {
   id: RuleVariant
@@ -11,6 +11,15 @@ export interface RuleVariantOption {
 }
 
 export const DEFAULT_RULE_VARIANT: RuleVariant = 'lotus-classic'
+
+export const SHANDONG_RULE: RuleVariantOption = {
+  id: 'shandong',
+  name: '山东麻将',
+  description: '山东麻将现行规则',
+  highlights: ['144张花牌', '258掌将', '可吃可碰', '明搂加倍'],
+  badge: '新玩法',
+  rulesetId: 'shandong',
+}
 
 export const RULE_VARIANTS: readonly RuleVariantOption[] = [
   {
@@ -29,10 +38,12 @@ export const RULE_VARIANTS: readonly RuleVariantOption[] = [
     badge: '',
     rulesetId: 'lotus-legacy',
   },
+  SHANDONG_RULE,
 ]
 
 export function getRuleVariant(id: RuleVariant) {
   if (id === 'lotus-blood-flow') return BLOOD_FLOW_RULE
+  if (id === 'shandong') return SHANDONG_RULE
   const variant = RULE_VARIANTS.find((variant) => variant.id === id)
   if (!variant) throw new Error(`Unknown ruleset: ${id}`)
   return variant

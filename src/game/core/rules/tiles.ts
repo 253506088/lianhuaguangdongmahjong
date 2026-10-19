@@ -1,9 +1,10 @@
-import type { HonorTile, Suit, TileType } from '../contracts/types'
+import type { FlowerTile, HonorTile, Suit, TileType } from '../contracts/types'
 
 export const SUITS: Suit[] = ['m', 'p', 's']
 export const HONORS: HonorTile[] = ['east', 'south', 'west', 'north', 'red', 'green', 'white']
+export const FLOWER_TILES: FlowerTile[] = ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8']
 
-export const TILE_META = {
+export const TILE_META: Record<string, { name: string; col: number; row: number }> = {
   back: { name: '牌背', col: 0, row: 0 },
   m1: { name: '一万', col: 1, row: 0 }, p1: { name: '一筒', col: 2, row: 0 }, s1: { name: '一条', col: 3, row: 0 },
   east: { name: '东风', col: 4, row: 0 }, m2: { name: '二万', col: 5, row: 0 }, p2: { name: '二筒', col: 6, row: 0 },
@@ -15,6 +16,10 @@ export const TILE_META = {
   m7: { name: '七万', col: 4, row: 3 }, p7: { name: '七筒', col: 5, row: 3 }, s7: { name: '七条', col: 6, row: 3 },
   red: { name: '红中', col: 0, row: 4 }, m8: { name: '八万', col: 1, row: 4 }, p8: { name: '八筒', col: 2, row: 4 }, s8: { name: '八条', col: 3, row: 4 },
   m9: { name: '九万', col: 4, row: 4 }, p9: { name: '九筒', col: 5, row: 4 }, s9: { name: '九条', col: 6, row: 4 },
+  f1: { name: '春', col: 0, row: 0 }, f2: { name: '夏', col: 0, row: 0 },
+  f3: { name: '秋', col: 0, row: 0 }, f4: { name: '冬', col: 0, row: 0 },
+  f5: { name: '梅', col: 0, row: 0 }, f6: { name: '兰', col: 0, row: 0 },
+  f7: { name: '竹', col: 0, row: 0 }, f8: { name: '菊', col: 0, row: 0 },
 }
 
 export const TILE_TYPES: TileType[] = [
@@ -22,11 +27,17 @@ export const TILE_TYPES: TileType[] = [
   ...HONORS,
 ] as TileType[]
 
-const HONOR_FACE_INDEX = { east: 1, south: 2, west: 3, north: 4, red: 5, green: 6, white: 7 }
+export const ALL_TILE_TYPES: TileType[] = [
+  ...TILE_TYPES,
+  ...FLOWER_TILES,
+]
+
+const HONOR_FACE_INDEX: Record<string, number> = { east: 1, south: 2, west: 3, north: 4, red: 5, green: 6, white: 7 }
 
 export function tileFaceFile(tile: TileType) {
   const suited = /^([mps])([1-9])$/.exec(tile)
   if (suited) return `${suited[2]}${suited[1]}.png`
+  if (tile.startsWith('f')) return `${tile}.svg`
   return HONOR_FACE_INDEX[tile] ? `${HONOR_FACE_INDEX[tile]}z.png` : null
 }
 
