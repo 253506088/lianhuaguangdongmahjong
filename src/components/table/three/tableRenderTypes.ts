@@ -45,6 +45,8 @@ export interface TableProps {
   flipTile?: TileType | null
   /** 翻精所在物理墩（0..67），指示牌在牌山上的位置 */
   flipStack?: number
+  /** 山东麻将公开的杠头牌（牌尾展示） */
+  gangHeadTile?: TileType | null
 }
 
 export type ResolvedTableProps = {

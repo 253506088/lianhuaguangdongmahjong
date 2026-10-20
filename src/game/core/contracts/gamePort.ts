@@ -120,6 +120,8 @@ export interface WinEffect {
 export interface WaitTileInfo {
   tile: TileType
   remaining: number
+  fan?: number
+  multiplier?: number
 }
 
 export interface WaitInfo {
@@ -134,6 +136,8 @@ export interface GameCapabilities {
   chi?: { choose(optionIndex: number): void }
   windKong?: { available: boolean; execute(): void }
   mingLou?: { available: boolean; execute(): void }
+  baoTing?: { available: boolean; execute(): void }
+  gangHeadTile?: TileType | null
   lotusTable?: {
     flipTile: TileType | null
     jokerTiles: TileType[]

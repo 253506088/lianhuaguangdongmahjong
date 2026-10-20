@@ -440,6 +440,7 @@ button { font: inherit; }
 .player-info span { color: var(--theme-accent-text); font-size: clamp(13px, 1vw, 17px); font-weight: 700; text-shadow: 0 1px 3px #000; }
 .dealer-badge { position: absolute; z-index: 4; top: -7px; left: -5px; display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: #b8272f; color: white; font: 700 11px serif; box-shadow: 0 1px 5px #000; }
 .minglou-badge { position: absolute; z-index: 4; bottom: -7px; left: -5px; display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: #d97706; color: white; font: 700 11px sans-serif; box-shadow: 0 1px 5px #000; }
+.baoting-badge { position: absolute; z-index: 4; bottom: -7px; left: -5px; display: grid; place-items: center; width: 19px; height: 19px; border-radius: 50%; background: #059669; color: white; font: 700 11px sans-serif; box-shadow: 0 1px 5px #000; }
 .flower-badge { position: absolute; z-index: 4; top: -7px; right: -5px; display: inline-flex; align-items: center; gap: 2px; padding: 1px 5px; border-radius: 10px; background: rgba(219, 39, 119, 0.85); color: white; font: 700 11px sans-serif; box-shadow: 0 1px 5px #000; white-space: nowrap; }
 .minglou-waits-card {
   position: absolute;
@@ -482,6 +483,12 @@ button { font: inherit; }
   align-items: center;
   gap: 2px;
 }
+.minglou-wait-fan {
+  font-size: 10px;
+  font-weight: 800;
+  color: #fbbf24;
+  line-height: 1;
+}
 .minglou-wait-remain {
   font-size: 11px;
   font-weight: 700;
@@ -509,6 +516,7 @@ button { font: inherit; }
 .announcement { position: absolute; z-index: 40; top: 34%; left: 50%; transform: translate(-50%, -50%); padding: 4px 37px; background: linear-gradient(90deg, transparent, rgba(10,11,8,.86) 20%, rgba(10,11,8,.86) 80%, transparent); pointer-events: none; }
 .announcement span { display: block; min-width: 140px; color: #f3d47c; font: 900 clamp(20px, 2.7vw, 40px) "Noto Serif SC", serif; letter-spacing: .12em; text-align: center; text-shadow: 0 2px 4px #000, 0 0 14px rgba(240,188,67,.45); }
 .announcement.red span { color: #ffdb91; text-shadow: 0 2px 4px #000, 0 0 14px #b82429; }
+.announcement.emerald span { color: #a7f3d0; text-shadow: 0 2px 4px #000, 0 0 14px #059669; }
 
 /* 碰杠反馈绑定到行动座位；不移动弃牌，靠方向、头像和副露落位建立因果。 */
 .table-action-cue {
@@ -755,6 +763,19 @@ button { font: inherit; }
 .waiting-tiles { display: flex; gap: 7px; overflow-x: auto; padding: 2px 2px 5px; }
 .waiting-tiles > div { display: grid; flex: 0 0 auto; justify-items: center; gap: 3px; }
 .waiting-tiles .mahjong-tile.small { --tile-width: clamp(42px, 3.25vw, 60px); }
+.waiting-tiles .wait-fan {
+  min-width: 30px;
+  padding: 1px 4px;
+  border-radius: 3px;
+  background: rgba(234, 179, 8, 0.22);
+  border: 1px solid rgba(234, 179, 8, 0.65);
+  color: #fbbf24;
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+  white-space: nowrap;
+  line-height: 1.1;
+}
 .waiting-tiles small { min-width: 30px; padding: 3px 5px; border-radius: 3px; background: #28b8c7; color: #f4ffff; font-size: 11px; font-weight: 800; text-align: center; white-space: nowrap; }
 .waiting-total { margin-left: 11px !important; }
 .waiting-heading { flex: 0 0 auto; align-self: flex-start; margin: 5px 12px 0 0; font-size: 16px !important; white-space: nowrap; }
@@ -1162,6 +1183,7 @@ button { font: inherit; }
   .waiting-tiles { gap: 4px; padding: 1px 1px 3px; }
   .waiting-tiles > div { gap: 2px; }
   .waiting-tiles .mahjong-tile.small { --tile-width: clamp(27px, 4.4vh, 34px); }
+  .waiting-tiles .wait-fan { min-width: 24px; padding: 1px 3px; font-size: 9px; }
   .waiting-tiles small { min-width: 24px; padding: 2px 4px; font-size: 9px; }
   .action { min-width: 48px; height: 42px; padding: 4px 8px; }
   .waiting-action { width: 48px; height: 52px; padding: 0; }

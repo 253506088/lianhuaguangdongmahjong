@@ -20,6 +20,8 @@ export function createShandongGameState() {
     ...base,
     /** 明搂状态的玩家座位集合 */
     mingLouPlayers: ref<Set<number>>(new Set()),
+    /** 报听状态的玩家座位集合 */
+    baoTingPlayers: ref<Set<number>>(new Set()),
     /** 过胡锁定的玩家座位（自己摸牌前不能点炮胡） */
     passedHuPlayers: ref<Set<number>>(new Set()),
     /** 过碰锁定的牌（自己摸牌前不能碰这些牌） Map<playerIndex, Set<TileType>> */
@@ -28,6 +30,8 @@ export function createShandongGameState() {
     roundFirstDiscard: ref(false),
     /** 是否为乱将（任意将）规则 */
     luanJiang: ref(false),
+    /** 山东麻将公开杠头牌（开杠即摸，有人杠走后翻开下一张） */
+    gangHeadTile: ref<TileType | null>(null),
   }
 }
 

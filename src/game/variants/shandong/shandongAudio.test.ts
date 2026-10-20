@@ -403,6 +403,225 @@ describe('山东麻将音频与语音播报', () => {
     await new Promise((r) => setTimeout(r, 120))
     expect(playSoundAndWait).toHaveBeenCalledWith('2p.mp3')
   })
+
+  it('未报听未明楼时 userCanHu 为 false；报听后 userCanHu 为 true', async () => {
+    const { createShandongSelectors } = await import('./shandongSelectors')
+    const state = createShandongGameState()
+    state.luanJiang.value = true
+    resetLocalPlayers(state, 2000)
+
+    // 玩家 0 已经摸到了胡牌：手牌为成和牌型
+    state.players[0].hand = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'p1', 'p2', 'p3', 's5', 's5'] as TileType[]
+    state.phase.value = 'discard'
+    state.currentPlayer.value = 0
+    state.userDrewThisTurn.value = true
+
+    const selectors = createShandongSelectors(state)
+    // 尚未报听也未明楼：不可胡牌！
+    expect(selectors.userCanHu.value).toBe(false)
+    expect(selectors.userCanBaoTing.value).toBe(true)
+    expect(selectors.userCanMingLou.value).toBe(true)
+
+    // 玩家声明报听后
+    state.baoTingPlayers.value.add(0)
+    expect(selectors.userCanHu.value).toBe(true)
+    // 报听后不能重复报听或明楼
+    expect(selectors.userCanBaoTing.value).toBe(false)
+    expect(selectors.userCanMingLou.value).toBe(false)
+  })
+
+  it('点炮胡必须要求报听：未报听玩家不可点炮胡，已报听玩家可点炮胡，明楼玩家不可点炮胡', async () => {
+    const state = createShandongGameState()
+    state.luanJiang.value = true
+    resetLocalPlayers(state, 2000)
+
+    // 玩家1听 s5，但未报听
+    state.players[1].hand = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'p1', 'p2', 'p3', 's5'] as TileType[]
+    // 玩家2听 s5，已明楼
+    state.players[2].hand = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'p1', 'p2', 'p3', 's5'] as TileType[]
+    state.mingLouPlayers.value.add(2)
+    state.players[2].isMingLou = true
+    // 玩家3听 s5，已报听
+    state.players[3].hand = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'p1', 'p2', 'p3', 's5'] as TileType[]
+    state.baoTingPlayers.value.add(3)
+    state.players[3].isBaoTing = true
+
+    const endGameMock = vi.fn()
+    const controllers = [
+      { requestTurn: vi.fn(), requestHu: vi.fn(), requestClaim: vi.fn(), requestChi: vi.fn(), requestRobKong: vi.fn(), reset: vi.fn() },
+      { requestTurn: vi.fn(), requestHu: vi.fn(), requestClaim: vi.fn(), requestChi: vi.fn(), requestRobKong: vi.fn(), reset: vi.fn() },
+      { requestTurn: vi.fn(), requestHu: vi.fn(), requestClaim: vi.fn(), requestChi: vi.fn(), requestRobKong: vi.fn(), reset: vi.fn() },
+      {
+        requestTurn: vi.fn(),
+        requestHu: vi.fn(async () => ({ kind: 'hu' as const })),
+        requestClaim: vi.fn(),
+        requestChi: vi.fn(),
+        requestRobKong: vi.fn(),
+        reset: vi.fn(),
+      },
+    ]
+
+    const orchestrator = createShandongTurnOrchestrator({
+      state,
+      controllers,
+      drawFor: async () => true,
+      discardTile: () => {},
+      endDraw: () => {},
+      endGame: endGameMock,
+      announce: () => {},
+      showTableAction: () => {},
+      playSound: () => {},
+      playSoundAndWait: async () => {},
+      wait: async () => {},
+      later: (cb) => { cb(); return 0 },
+    })
+
+    // 玩家0打出 s5
+    orchestrator.routeDiscard(0, 's5')
+
+    // 玩家1（未报听）不应被请求胡牌
+    expect(controllers[1].requestHu).not.toHaveBeenCalled()
+    // 玩家2（明楼）不应被请求胡牌（只能自摸）
+    expect(controllers[2].requestHu).not.toHaveBeenCalled()
+    // 玩家3（已报听）应该被请求胡牌
+    expect(controllers[3].requestHu).toHaveBeenCalled()
+    await new Promise((r) => setTimeout(r, 50))
+    expect(endGameMock).toHaveBeenCalledWith(3, expect.objectContaining({ selfDraw: false, winTile: 's5' }))
+  })
+
+  it('杠头全局公开：初始为牌尾最后一张，正常摸牌与补花不改变杠头，开杠摸取后翻开下一张', async () => {
+    const game = useShandongGame({ headless: true })
+    // 初始化对局
+    game.startGame('east')
+    const wall = game.wall.value
+
+    expect(wall.length).toBeGreaterThan(0)
+    // 初始杠头应为牌尾最后一张且非花牌
+    const initialGangHead = wall[wall.length - 1]
+    expect(game.capabilities.value.gangHeadTile).toBe(initialGangHead)
+    expect(initialGangHead.startsWith('f')).toBe(false)
+
+    // 1. 正常摸牌：从牌头摸取，公开杠头绝对不变
+    const normalTile = game.drawFromWall('normal')
+    expect(normalTile).toBeTruthy()
+    expect(game.capabilities.value.gangHeadTile).toBe(initialGangHead)
+
+    // 2. 补花摸牌：从杠头前摸取，公开杠头绝对不变
+    const flowerTile = game.drawFromWall('flower')
+    expect(flowerTile).toBeTruthy()
+    expect(game.capabilities.value.gangHeadTile).toBe(initialGangHead)
+
+    // 3. 只有开杠：从牌尾摸走杠头，之后掀开牌尾下一张作为新的杠头
+    const tailDrawn = game.drawFromWall('kong')
+    expect(tailDrawn).toBe(initialGangHead)
+
+    // 牌尾新的最后一张自动成为新的杠头
+    const nextGangHead = wall[wall.length - 1]
+    expect(game.capabilities.value.gangHeadTile).toBe(nextGangHead)
+    expect(nextGangHead.startsWith('f')).toBe(false)
+  })
+
+  it('听牌提示包含番数估算与剩余张数', async () => {
+    const { createShandongSelectors } = await import('./shandongSelectors')
+    const { computeMingLouWaits } = await import('./shandongRules')
+    const state = createShandongGameState()
+    state.luanJiang.value = true
+    resetLocalPlayers(state, 2000)
+
+    // 玩家 0 听 s5，牌型包含一条龙 + 门清
+    state.players[0].hand = [
+      'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9',
+      'p1', 'p2', 'p3',
+      's5',
+    ] as TileType[]
+    state.phase.value = 'discard'
+    state.currentPlayer.value = 0
+    state.userDrewThisTurn.value = false
+
+    const selectors = createShandongSelectors(state)
+    const waits = selectors.userCurrentWaits.value?.tiles
+    expect(waits).toBeDefined()
+    expect(waits?.length).toBeGreaterThan(0)
+
+    const s5Wait = waits?.find((w) => w.tile === 's5')
+    expect(s5Wait).toBeDefined()
+    expect(s5Wait?.remaining).toBe(3) // 4 - 1(手里的1张)
+    expect(s5Wait?.fan).toBe(8) // 一条龙 (4) * 门清 (2) = 8番
+
+    // 明楼玩家听牌列表中亦包含番数（明楼翻倍 ×2 => 16番）
+    const mingLouWaits = computeMingLouWaits(
+      { hand: state.players[0].hand, melds: [] },
+      ['s5'],
+      state.players,
+      1,
+      { luanJiang: true },
+    )
+    const mlWait = mingLouWaits.find((w) => w.tile === 's5')
+    expect(mlWait?.fan).toBe(16)
+  })
+
+  it('玩家报听后，只要未胡牌摸到手里的牌自动摸打直接打出；胡牌时提供胡牌决策', async () => {
+    const state = createShandongGameState()
+    state.luanJiang.value = true
+    resetLocalPlayers(state, 2000)
+
+    // 玩家 0 听 s5，且已报听
+    state.players[0].hand = [
+      'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9',
+      'p1', 'p2', 'p3',
+      's5',
+    ] as TileType[]
+    state.baoTingPlayers.value.add(0)
+    state.players[0].isBaoTing = true
+
+    const discardTileMock = vi.fn()
+    const requestTurnMock = vi.fn(async () => ({ kind: 'win' as const }))
+    const controllers = [
+      { requestTurn: requestTurnMock, requestHu: vi.fn(), requestClaim: vi.fn(), requestChi: vi.fn(), requestRobKong: vi.fn(), reset: vi.fn() },
+      { requestTurn: vi.fn(), requestHu: vi.fn(), requestClaim: vi.fn(), requestChi: vi.fn(), requestRobKong: vi.fn(), reset: vi.fn() },
+      { requestTurn: vi.fn(), requestHu: vi.fn(), requestClaim: vi.fn(), requestChi: vi.fn(), requestRobKong: vi.fn(), reset: vi.fn() },
+      { requestTurn: vi.fn(), requestHu: vi.fn(), requestClaim: vi.fn(), requestChi: vi.fn(), requestRobKong: vi.fn(), reset: vi.fn() },
+    ]
+
+    let nextDrawTile: TileType = 'p9'
+    const orchestrator = createShandongTurnOrchestrator({
+      state,
+      controllers,
+      drawFor: async (idx) => {
+        state.players[idx].hand.push(nextDrawTile)
+        state.players[idx].drawnTileIndex = state.players[idx].hand.length - 1
+        return true
+      },
+      discardTile: discardTileMock,
+      endDraw: () => {},
+      endGame: vi.fn(),
+      announce: () => {},
+      showTableAction: () => {},
+      playSound: () => {},
+      playSoundAndWait: async () => {},
+      wait: async () => {},
+      later: (cb) => { cb(); return 0 },
+    })
+
+    // 1. 摸到非胡牌 p9：直接自动摸打打出，不阻塞玩家请求
+    nextDrawTile = 'p9'
+    await orchestrator.beginTurn(0)
+    expect(discardTileMock).toHaveBeenCalledWith(0, expect.any(Number))
+    expect(requestTurnMock).not.toHaveBeenCalled()
+
+    // 2. 摸到可胡牌 s5：交由 requestTurn 供玩家点击【胡】
+    discardTileMock.mockClear()
+    requestTurnMock.mockClear()
+    // 恢复手牌为 13 张
+    state.players[0].hand = [
+      'm1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9',
+      'p1', 'p2', 'p3',
+      's5',
+    ] as TileType[]
+    nextDrawTile = 's5'
+    await orchestrator.beginTurn(0)
+    expect(requestTurnMock).toHaveBeenCalled()
+  })
 })
 
 

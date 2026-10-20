@@ -4,6 +4,8 @@ import {
   calculateHuaPoints,
   canChi,
   canMakePinghu,
+  computeMingLouWaits,
+  computeUnseenTileCount,
   createShandongWall,
   evaluateShandongHand,
   is258Tile,
@@ -405,6 +407,63 @@ describe('山东麻将规则测试（图文规则精准落地）', () => {
       // 保存258
       saveShandongJiangPreference('258', storageLike)
       expect(readShandongJiangPreference(storageLike)).toBe('258')
+    })
+  })
+
+  describe('杠头牌与报听规则测试', () => {
+    it('computeUnseenTileCount 扣减公开的杠头牌', () => {
+      const userHand: TileType[] = ['m1', 'm2']
+      const players = [
+        makeMockPlayer({ seat: 0, hand: userHand }),
+        makeMockPlayer({ seat: 1, hand: ['m5', 'm6'] }),
+      ]
+
+      // 未指定杠头牌时，m1在手有1张，场外剩余 4 - 1 = 3
+      expect(computeUnseenTileCount('m1', userHand, players, 0)).toBe(3)
+
+      // 杠头牌公开为 m1 时，场外剩余变为 4 - 1(手牌) - 1(杠头) = 2
+      expect(computeUnseenTileCount('m1', userHand, players, 0, 'm1')).toBe(2)
+
+      // 杠头牌为 p9 时，对 m1 无影响
+      expect(computeUnseenTileCount('m1', userHand, players, 0, 'p9')).toBe(3)
+    })
+
+    it('computeMingLouWaits 考虑公开的杠头牌', () => {
+      const p1 = makeMockPlayer({
+        seat: 1,
+        isMingLou: true,
+        hand: ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 's2', 's2', 's3', 's4'], // 听 s2/s5
+      })
+      const userHand: TileType[] = ['s2']
+      const players = [
+        makeMockPlayer({ seat: 0, hand: userHand }),
+        p1,
+      ]
+
+      // s2 在本家手牌有1张，p1明楼手牌有2张。未算杠头时剩余 4 - 1 - 2 = 1
+      const waitsBefore = computeMingLouWaits(p1, userHand, players, 0, { luanJiang: true }, null)
+      const wait2sBefore = waitsBefore.find((w) => w.tile === 's2')
+      expect(wait2sBefore?.remaining).toBe(1)
+
+      // 杠头公开为 s2 时，剩余 4 - 1(我) - 2(他明楼) - 1(杠头) = 0
+      const waitsAfter = computeMingLouWaits(p1, userHand, players, 0, { luanJiang: true }, 's2')
+      const wait2sAfter = waitsAfter.find((w) => w.tile === 's2')
+      expect(wait2sAfter?.remaining).toBe(0)
+    })
+
+    it('报听与明楼算番：明楼番数*2，报听记录番型倍数正常', () => {
+      const hand: TileType[] = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'p2', 'p3', 'p4', 's5', 's5']
+      const player = makeMockPlayer({ hand })
+
+      // 普通自摸（报听）
+      const evalBaoTing = evaluateShandongHand(player, hand, [], { selfDraw: true, isBaoTing: true })
+      expect(evalBaoTing?.patterns.some((p) => p.name === '报听')).toBe(true)
+      expect(evalBaoTing?.totalMultiplier).toBe(8) // 一条龙 (4) * 门清 (2)
+
+      // 明楼自摸
+      const evalMingLou = evaluateShandongHand(player, hand, [], { selfDraw: true, isMingLou: true })
+      expect(evalMingLou?.patterns.some((p) => p.name === '明搂')).toBe(true)
+      expect(evalMingLou?.totalMultiplier).toBe(16) // 一条龙 (4) * 门清 (2) * 明搂 (2) = 16
     })
   })
 })

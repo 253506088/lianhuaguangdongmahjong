@@ -22,7 +22,7 @@ const props = withDefaults(defineProps<{
   /** AI 大模型吐槽气泡（可选；由上层管理过期） */
   bubble?: { text: string; id: number; persistent?: boolean } | null
   /** 明搂听牌与剩余张数（他人视角） */
-  mingLouWaits?: Array<{ tile: TileType; remaining: number }>
+  mingLouWaits?: Array<{ tile: TileType; remaining: number; fan?: number }>
 }>(), { active: false, actionActive: false, scoreDelta: 0, scoreFlowId: 0, dealer: false, avatarOverride: undefined, bubble: null, mingLouWaits: undefined })
 
 // 外部头像（联机真人）加载失败 → 回退到本地座位默认头像
@@ -47,6 +47,7 @@ const flowerCount = computed(() => (props.player.melds || []).filter((m) => m.ty
     <div class="avatar-wrap">
       <span v-if="dealer" class="dealer-badge">庄</span>
       <span v-if="player.isMingLou" class="minglou-badge" title="明搂">搂</span>
+      <span v-if="player.isBaoTing && !player.isMingLou" class="baoting-badge" title="报听">听</span>
       <span v-if="flowerCount > 0" class="flower-badge" :title="`花牌: ${flowerCount}张`">🌸{{ flowerCount }}</span>
       <img class="avatar" :src="avatarSrc" :alt="`${player.name}头像`" @error="onAvatarError" />
       <div class="player-info">
@@ -74,6 +75,7 @@ const flowerCount = computed(() => (props.player.melds || []).filter((m) => m.ty
       <div class="minglou-waits-list">
         <div v-for="item in mingLouWaits" :key="item.tile" class="minglou-wait-tile" :class="{ exhausted: item.remaining === 0 }">
           <MahjongTile :tile="item.tile" :theme-name="themeName" small disabled />
+          <span v-if="item.fan" class="minglou-wait-fan">{{ item.fan }}番</span>
           <span class="minglou-wait-remain">{{ item.remaining }}张</span>
         </div>
       </div>

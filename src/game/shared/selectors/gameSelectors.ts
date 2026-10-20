@@ -42,6 +42,8 @@ interface RuleSelectorOptions {
   concealedKongs: (hand: TileType[]) => TileType[]
   waitingTiles: (hand: TileType[], meldCount: number) => TileType[]
   matchingCount: (tiles: TileType[], tile: TileType) => number
+  estimateFan?: (handWithoutWinTile: TileType[], winTile: TileType) => number | undefined
+  getGangHeadTile?: () => TileType | null | undefined
 }
 
 export function createRulePlayerSelectors(options: RuleSelectorOptions) {
@@ -65,11 +67,23 @@ export function createRulePlayerSelectors(options: RuleSelectorOptions) {
         visible += options.matchingCount(player.hand, tile)
       }
     })
+    const gangHead = options.getGangHeadTile?.()
+    if (gangHead && gangHead === tile) {
+      visible += 1
+    }
     return Math.max(0, 4 - visible)
   }
-  function makeWaitInfo(waits: TileType[], discard: TileType | null = null): WaitInfo | null {
+  function makeWaitInfo(waits: TileType[], discard: TileType | null = null, handWithoutWinTile?: TileType[]): WaitInfo | null {
     if (!waits.length) return null
-    const tiles = waits.map((tile) => ({ tile, remaining: visibleRemainingCount(tile) }))
+    const tiles = waits.map((tile) => {
+      const fan = options.estimateFan && handWithoutWinTile ? options.estimateFan(handWithoutWinTile, tile) : undefined
+      return {
+        tile,
+        remaining: visibleRemainingCount(tile),
+        fan,
+        multiplier: fan,
+      }
+    })
     return {
       discard,
       tiles,
@@ -80,11 +94,25 @@ export function createRulePlayerSelectors(options: RuleSelectorOptions) {
   function discardWaitInfo(handIndex: number) {
     if (!user.value) return null
     const handAfterDiscard = user.value.hand.filter((_, index) => index !== handIndex)
-    return makeWaitInfo(options.waitingTiles(handAfterDiscard, structuralMeldCount(user.value)), user.value.hand[handIndex])
+    return makeWaitInfo(
+      options.waitingTiles(handAfterDiscard, structuralMeldCount(user.value)),
+      user.value.hand[handIndex],
+      handAfterDiscard,
+    )
   }
   const userCurrentWaits = computed(() => {
     if (!user.value || ['lobby', 'dealing', 'settled'].includes(phase.value)) return null
-    return makeWaitInfo(options.waitingTiles(user.value.hand, structuralMeldCount(user.value)))
+    const hand = user.value.hand
+    const baseHand = hand.length % 3 === 2
+      ? (user.value.drawnTileIndex !== undefined && user.value.drawnTileIndex >= 0 && user.value.drawnTileIndex < hand.length
+          ? hand.filter((_, i) => i !== user.value.drawnTileIndex)
+          : hand.slice(0, -1))
+      : hand
+    return makeWaitInfo(
+      options.waitingTiles(user.value.hand, structuralMeldCount(user.value)),
+      null,
+      baseHand,
+    )
   })
   const userTingOptions = computed(() => {
     if (!user.value || !isUserTurn.value) return []

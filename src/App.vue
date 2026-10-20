@@ -361,6 +361,9 @@ const lotusTable = computed(() => capabilities.value.lotusTable)
 const userHasWindKong = computed(() => capabilities.value.windKong?.available ?? false)
 const userCanMingLou = computed(() => capabilities.value.mingLou?.available ?? false)
 const userMingLou = () => capabilities.value.mingLou?.execute()
+const userCanBaoTing = computed(() => capabilities.value.baoTing?.available ?? false)
+const userBaoTing = () => capabilities.value.baoTing?.execute()
+const gangHeadTile = computed(() => capabilities.value.gangHeadTile ?? null)
 const userChi = (optionIndex: number) => capabilities.value.chi?.choose(optionIndex)
 const userWindKong = () => capabilities.value.windKong?.execute()
 const flipTile = computed(() => lotusTable.value?.flipTile ?? null)
@@ -809,6 +812,8 @@ function changeTableTheme(theme: TableThemeName) {
         :user-kongs="userKongs"
         :user-has-wind-kong="userHasWindKong"
         :user-can-ming-lou="userCanMingLou"
+        :user-can-bao-ting="userCanBaoTing"
+        :gang-head-tile="gangHeadTile"
         :shandong-jiang="shandongJiang"
         :auto-play-enabled="gameMode === 'remote'"
         :auto-play="remoteAutoPlay"
@@ -834,6 +839,7 @@ function changeTableTheme(theme: TableThemeName) {
         @hu="userHu"
         @wind-kong="userWindKong"
         @ming-lou="userMingLou"
+        @bao-ting="userBaoTing"
         @toggle-auto-play="toggleAutoPlay"
         @ready="handleTableReady"
         @next-round="nextRound"

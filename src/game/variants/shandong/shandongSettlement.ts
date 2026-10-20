@@ -72,6 +72,7 @@ export function createShandongSettlement(options: ShandongSettlementOptions) {
       dihu: Boolean(endOptions.dihu),
       haidi: state.wall.value.length === 0 && isSelfDraw,
       isMingLou: state.mingLouPlayers.value.has(winnerIndex),
+      isBaoTing: state.baoTingPlayers.value.has(winnerIndex),
       luanJiang: state.luanJiang.value,
     }
 

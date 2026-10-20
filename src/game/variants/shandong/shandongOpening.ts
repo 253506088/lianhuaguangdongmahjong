@@ -3,7 +3,7 @@ import type { MatchType, TileType } from '../../core/contracts/types'
 import { MATCH_HANDS, PACE_MS } from '../../core/local/localGameConfig'
 import { resetLocalPlayers, type PlayerSeed } from '../../shared/runtime/localOpening'
 import type { ShandongGameState } from './shandongState'
-import { createShandongWall, isFlowerTile, isWinningHand } from './shandongRules'
+import { createShandongWall, ensureTailNotFlower, isFlowerTile, isWinningHand } from './shandongRules'
 import { shuffle, sortTiles } from '../../core/rules/tiles'
 
 interface ShandongOpeningOptions {
@@ -58,15 +58,21 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
     state.winEffect.value = null
     state.winPresentation.value = null
     state.mingLouPlayers.value.clear()
+    state.baoTingPlayers.value.clear()
     state.passedHuPlayers.value.clear()
     state.passedPengTiles.value.clear()
-    state.players.forEach((p) => { p.isMingLou = false })
+    state.players.forEach((p) => {
+      p.isMingLou = false
+      p.isBaoTing = false
+    })
 
     resetPlayers()
 
     // 洗牌（144张牌）
     const wall = shuffle(createShandongWall())
+    ensureTailNotFlower(wall)
     state.wall.value = wall
+    state.gangHeadTile.value = wall.length > 0 ? wall[wall.length - 1] : null
     state.wallHeadDrawn.value = 0
 
     // 等待 3D 牌桌准备完毕
@@ -117,6 +123,10 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
 
     await options.wait(600)
     if (sequence !== currentSequence) return
+
+    // 起手补花完成后，正式开局前确立全局公开杠头牌（保证不为花牌）
+    ensureTailNotFlower(state.wall.value)
+    state.gangHeadTile.value = state.wall.value.length > 0 ? state.wall.value[state.wall.value.length - 1] : null
 
     state.openingStage.value = null
     state.phase.value = 'playing'
