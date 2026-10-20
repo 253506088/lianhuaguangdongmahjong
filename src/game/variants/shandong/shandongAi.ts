@@ -19,7 +19,7 @@ export type ShandongTurnDecision =
   | { kind: 'win' }
   | { kind: 'added-kong'; meldIndex: number }
   | { kind: 'concealed-kong'; tile: TileType }
-  | { kind: 'discard'; handIndex: number; declareMingLou?: boolean }
+  | { kind: 'discard'; handIndex: number; declareMingLou?: boolean; declareBaoTing?: boolean }
 
 export type ShandongClaimAction =
   | { kind: 'hu' }
@@ -32,6 +32,7 @@ export interface ShandongTurnContext {
   hand: TileType[]
   melds: Meld[]
   isMingLou?: boolean
+  isBaoTing?: boolean
   wallCount?: number
   luanJiang?: boolean
 }
@@ -46,6 +47,7 @@ export interface ShandongClaimContext {
   canGang: boolean
   chiOptions: ChiMeld[]
   isMingLou?: boolean
+  isBaoTing?: boolean
 }
 
 function evaluateTileUtility(tile: TileType, hand: TileType[], luanJiang?: boolean): number {
@@ -116,13 +118,13 @@ export function chooseBestDiscardIndex(hand: TileType[], melds: Meld[] = [], lua
 
 /** AI 自家回合出牌决策 */
 export function decideTurn(ctx: ShandongTurnContext): ShandongTurnDecision {
-  // 1. 优先自摸胡
-  if (canWinOnSelfDraw(ctx.hand, ctx.melds, { luanJiang: ctx.luanJiang })) {
+  // 1. 优先自摸胡：只有已明楼或已报听才可自摸胡
+  if ((ctx.isMingLou || ctx.isBaoTing) && canWinOnSelfDraw(ctx.hand, ctx.melds, { luanJiang: ctx.luanJiang })) {
     return { kind: 'win' }
   }
 
-  // 2. 若已明搂，不能换手牌，必须摸打（打出最后摸到的牌）
-  if (ctx.isMingLou) {
+  // 2. 若已明搂或已报听，不能换手牌，必须摸打（打出最后摸到的牌）
+  if (ctx.isMingLou || ctx.isBaoTing) {
     return { kind: 'discard', handIndex: ctx.hand.length - 1 }
   }
 
@@ -140,21 +142,29 @@ export function decideTurn(ctx: ShandongTurnContext): ShandongTurnDecision {
   // 4. 选择最佳切牌
   const { index, reachesTing } = chooseBestDiscardIndex(ctx.hand, ctx.melds, ctx.luanJiang)
 
-  // 若 AI 听牌且剩余牌墙充足，AI 也有一定几率明搂博加倍
-  const declareMingLou = reachesTing && (ctx.wallCount ?? 40) > 20
+  // 报听与明楼决策：在山东麻将中，必须报听才能胡牌；AI 听牌时必须报听（或偶尔明楼博加倍）
+  let declareMingLou = false
+  let declareBaoTing = false
+  if (reachesTing) {
+    if ((ctx.wallCount ?? 40) > 30 && Math.random() < 0.15) {
+      declareMingLou = true
+    } else {
+      declareBaoTing = true
+    }
+  }
 
-  return { kind: 'discard', handIndex: index, declareMingLou }
+  return { kind: 'discard', handIndex: index, declareMingLou, declareBaoTing }
 }
 
 /** AI 响应他人弃牌决策 */
 export function decideClaim(ctx: ShandongClaimContext): ShandongClaimAction {
-  // 1. 优先点炮胡牌（明搂者不能点炮胡，只能自摸）
-  if (ctx.canHu && !ctx.isMingLou) {
+  // 1. 优先点炮胡牌：必须报听后才可点炮胡（明搂者不能点炮胡，未报听者不能胡）
+  if (ctx.canHu && ctx.isBaoTing && !ctx.isMingLou) {
     return { kind: 'hu' }
   }
 
-  // 明搂后锁手，不碰、不杠、不吃
-  if (ctx.isMingLou) {
+  // 明搂或报听后锁手，不碰、不杠、不吃
+  if (ctx.isMingLou || ctx.isBaoTing) {
     return { kind: 'pass' }
   }
 

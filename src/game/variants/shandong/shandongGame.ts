@@ -8,12 +8,12 @@ import { createMatchLifecycle } from '../../shared/runtime/matchLifecycle'
 import { createTimerScheduler } from '../../shared/runtime/timerScheduler'
 import type { PlayerSeed } from '../../shared/runtime/localOpening'
 import { tileName } from '../../core/rules/tiles'
-import { SHANDONG_RULESET } from './shandongRules'
+import { ensureTailNotFlower, SHANDONG_RULESET } from './shandongRules'
 import type { RuleSet } from '../../core/rules/ruleset'
 import { createShandongGameState, type ShandongEndGameOptions } from './shandongState'
 import { createShandongSelectors } from './shandongSelectors'
 import { createShandongOpening } from './shandongOpening'
-import { createShandongTileFlow } from './shandongTileFlow'
+import { createShandongTileFlow, type ShandongDrawReason } from './shandongTileFlow'
 import { createShandongTurnOrchestrator } from './shandongTurnOrchestrator'
 import { createShandongSettlement } from './shandongSettlement'
 import { createShandongHuman } from './shandongHuman'
@@ -163,13 +163,37 @@ export function useShandongGame({
 
   transient = createLocalTransientEventPresenter({ state, later, onTableAction: playAnimeAction })
 
-  function drawFromWall(fromTail = false): TileType | null {
+  function drawFromWall(type: ShandongDrawReason | boolean = 'normal'): TileType | null {
     if (state.wall.value.length === 0) return null
-    if (fromTail) {
-      return state.wall.value.pop() ?? null
+    const mode: ShandongDrawReason = type === true || type === 'kong'
+      ? 'kong'
+      : type === 'flower'
+        ? 'flower'
+        : 'normal'
+
+    if (mode === 'normal') {
+      // 牌墙若仅剩 1 张（即仅剩公开的杠头），正常摸牌结束，不能摸走杠头，流局
+      if (state.wall.value.length <= 1) return null
+      state.wallHeadDrawn.value += 1
+      return state.wall.value.shift() ?? null
     }
-    state.wallHeadDrawn.value += 1
-    return state.wall.value.shift() ?? null
+
+    if (mode === 'flower') {
+      // 补花摸牌：绝不能摸走公开的杠头（最后一张），从杠头前一张（倒数第二张）摸取
+      if (state.wall.value.length < 2) return null
+      return state.wall.value.splice(state.wall.value.length - 2, 1)[0] ?? null
+    }
+
+    if (mode === 'kong') {
+      // 开杠摸牌：摸走公开的杠头（最后一张）
+      const tile = state.wall.value.pop() ?? null
+      // 摸走后，掀开牌尾下一张作为新的杠头（确保不为花牌）
+      ensureTailNotFlower(state.wall.value)
+      state.gangHeadTile.value = state.wall.value.length > 0 ? state.wall.value[state.wall.value.length - 1] : null
+      return tile
+    }
+
+    return null
   }
 
   function endDraw() {
@@ -254,7 +278,7 @@ export function useShandongGame({
   countdown = createLocalCountdownController({
     state,
     playSound: sound,
-    enabled: countdownEnabled,
+    enabled: countdownEnabled && !headless,
     onDiscard: () => playerActions.userDiscard(),
     onPass: () => playerActions.userPass(),
   })
@@ -268,6 +292,7 @@ export function useShandongGame({
     canUserHu: () => selectors.userCanHu.value,
     getUserKongs: () => selectors.userKongs.value,
     userCanMingLou: () => selectors.userCanMingLou.value,
+    userCanBaoTing: () => selectors.userCanBaoTing.value,
     stopCountdown: countdown.stop,
     startTurnCountdown: countdown.startTurn,
     discardTile: tileFlow.discardTile,
@@ -292,6 +317,7 @@ export function useShandongGame({
     state.tableActionEvent.value = null
     state.scoreFlowEvent.value = null
     state.announcement.value = null
+    state.gangHeadTile.value = null
   }
 
   function startGame(mode?: MatchType, options: GameStartOptions = {}) {
@@ -314,6 +340,15 @@ export function useShandongGame({
         playerActions.userMingLou()
       },
     },
+    baoTing: {
+      get available() {
+        return selectors.userCanBaoTing.value
+      },
+      execute() {
+        playerActions.userBaoTing()
+      },
+    },
+    gangHeadTile: state.gangHeadTile.value,
   }))
 
   if (getCurrentInstance()) onBeforeUnmount(clearPresentation)
@@ -362,6 +397,7 @@ export function useShandongGame({
     ...matchLifecycle,
     tileName,
     humanController,
+    drawFromWall,
   })
 }
 

@@ -335,9 +335,12 @@ const {
 const lotusTable = computed(() => capabilities.value.lotusTable)
 const userHasWindKong = computed(() => capabilities.value.windKong?.available ?? false)
 const userCanMingLou = computed(() => capabilities.value.mingLou?.available ?? false)
+const userCanBaoTing = computed(() => capabilities.value.baoTing?.available ?? false)
 const userChi = (optionIndex: number) => capabilities.value.chi?.choose(optionIndex)
 const userWindKong = () => capabilities.value.windKong?.execute()
 const userMingLou = () => capabilities.value.mingLou?.execute()
+const userBaoTing = () => capabilities.value.baoTing?.execute()
+const gangHeadTile = computed(() => capabilities.value.gangHeadTile ?? null)
 const flipTile = computed(() => lotusTable.value?.flipTile ?? null)
 // 广麻固定以白板为癞子；莲花麻将将精牌与白板替代能力分开传给界面。
 // 联机 lotus-classic 快照不下发精牌（jokerTiles 为空数组），需兜底为白板癞子，
@@ -668,6 +671,8 @@ const themeLockReason = computed(() => (
           :user-kongs="userKongs"
           :user-has-wind-kong="userHasWindKong"
           :user-can-ming-lou="userCanMingLou"
+          :user-can-bao-ting="userCanBaoTing"
+          :gang-head-tile="gangHeadTile"
           :shandong-jiang="shandongJiang"
           :auto-play-enabled="gameMode === 'remote'"
           :auto-play="remoteAutoPlay"
@@ -693,6 +698,7 @@ const themeLockReason = computed(() => (
           @hu="userHu"
           @wind-kong="userWindKong"
           @ming-lou="userMingLou"
+          @bao-ting="userBaoTing"
           @toggle-auto-play="toggleAutoPlay"
           @ready="handleTableReady"
           @next-round="nextRound"

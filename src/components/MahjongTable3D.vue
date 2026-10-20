@@ -39,6 +39,7 @@ const props = withDefaults(defineProps<TableProps>(), {
   dealAnimation: () => ({ playerIndex: -1, count: 0, serial: 0 }),
   openingStage: null, diceValues: () => [1, 1], dealerIndex: 0, diceThrowerIndex: 0,
   tableActionEvent: null,
+  gangHeadTile: null,
 })
 const emit = defineEmits<{
   ready: []
@@ -628,6 +629,7 @@ watch(
     props.wildcardTiles?.join(','),
     props.flipStack,
     props.flipTile,
+    props.gangHeadTile,
     props.wallBreakIndex,
     props.bloodFlowBatches?.map(b => b.batchId).join(','),
     props.bloodFlowCompact,

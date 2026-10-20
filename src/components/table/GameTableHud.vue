@@ -78,6 +78,8 @@ interface Props {
   autoPlay?: boolean
   rulesetId?: 'lotus-classic' | 'lotus-legacy' | 'lotus-blood-flow' | 'shandong'
   userCanMingLou?: boolean
+  userCanBaoTing?: boolean
+  gangHeadTile?: TileType | null
   shandongJiang?: '258' | 'luan'
   bloodFlow?: BloodFlowTableState | null
   /** 联机（房间）对局：结算页的「退出本场」与暂离文案只在这种模式下有意义。 */
@@ -113,6 +115,7 @@ const emit = defineEmits<{
   hu: []
   windKong: []
   mingLou: []
+  baoTing: []
   toggleAutoPlay: []
   nextRound: []
   returnToLobby: []
@@ -194,6 +197,7 @@ const otherMingLouWaits = computed(() => {
       props.players,
       props.user.seat,
       { luanJiang: props.shandongJiang === 'luan' },
+      props.gangHeadTile,
     )
   })
   return result
@@ -430,7 +434,7 @@ function usesFinePointer() {
 
 function getUnseenCount(tile: TileType): number {
   if (!props.players?.length || !props.user) return 4
-  return computeUnseenTileCount(tile, props.user.hand, props.players, props.user.seat)
+  return computeUnseenTileCount(tile, props.user.hand, props.players, props.user.seat, props.gangHeadTile)
 }
 
 function handleTileHover(tile: TileType, index: number) {
@@ -585,6 +589,7 @@ function onAvatarError(entry: GamePlayer) {
       :wall-break-index="wallBreakIndex"
       :flip-tile="flipTile"
       :flip-stack="flipStack"
+      :gang-head-tile="gangHeadTile"
       :blood-flow-batches="bloodFlow?.batches"
       :blood-flow-compact="compactPiles"
       :blood-flow-presentation-key="bloodFlow?.presentationKey"
@@ -648,6 +653,29 @@ function onAvatarError(entry: GamePlayer) {
         </div>
       </div>
     </Transition>
+    <Transition name="gang-head-cue">
+      <div
+        v-if="rulesetId === 'shandong' && gangHeadTile"
+        key="gang-head"
+        class="gang-head-indicator"
+        role="region"
+        aria-label="公开杠头牌"
+        title="杠头：公开的杠牌，开杠后摸取此牌并翻开下一张"
+      >
+        <div class="gang-head-inner">
+          <div class="gang-head-badge">
+            <span class="gang-head-tag">杠头</span>
+          </div>
+          <div class="gang-head-tile-wrap">
+            <MahjongTile :tile="gangHeadTile" :theme-name="themeName" disabled />
+          </div>
+          <div class="gang-head-info">
+            <strong class="gang-head-name">{{ tileName(gangHeadTile) }}</strong>
+            <span class="gang-head-sub">开杠即摸</span>
+          </div>
+        </div>
+      </div>
+    </Transition>
     <!-- players 已按本家视角排序，但 player.seat 保留服务器绝对座位；气泡必须按本地索引读取。 -->
     <PlayerSeat
       v-for="(player, index) in players.slice(1)" :key="player.seat" :player="player"
@@ -682,6 +710,7 @@ function onAvatarError(entry: GamePlayer) {
       <div class="user-identity" :class="{ active: currentPlayer === 0, 'action-active': tableActionEvent?.actorIndex === 0 }" :style="userAnimeStyle">
         <span v-if="dealer === 0" class="dealer-badge">庄</span>
         <span v-if="user.isMingLou" class="minglou-badge" title="明搂">搂</span>
+        <span v-if="user.isBaoTing && !user.isMingLou" class="baoting-badge" title="报听">听</span>
         <span v-if="userFlowerCount > 0" class="flower-badge" :title="`花牌: ${userFlowerCount}张`">🌸{{ userFlowerCount }}</span>
         <img class="avatar" :src="userAvatar" :alt="`${user.name}头像`" @error="onAvatarError(user)" />
         <div class="player-info"><strong>{{ user.name }}</strong><span>{{ user.score }}</span></div>
@@ -724,7 +753,7 @@ function onAvatarError(entry: GamePlayer) {
           <span v-if="isTingDiscard(index, tile) && !isReformDiscard(index, tile)" class="ting-arrow" :class="{ 'with-unseen': isTileHintVisible(index) }" aria-hidden="true"></span>
           <span v-if="isReformDiscard(index, tile)" class="ting-arrow reform-arrow" :class="{ 'with-unseen': isTileHintVisible(index) }" aria-hidden="true"></span>
           <span v-if="isReformDiscard(index, tile)" class="reform-badge" aria-hidden="true">改</span>
-          <MahjongTile :tile="tile" :joker-tiles="jokerTiles" :wildcard-tiles="wildcardTiles" :theme-name="themeName" :selected="selectedIndex === index" :drawn="userDrawnIndex === index" :disabled="!isUserTurn || Boolean(bloodFlow?.seats[user.seat].locked && index !== userDrawnIndex)" @choose="handleTileActivation(index, $event)" />
+          <MahjongTile :tile="tile" :joker-tiles="jokerTiles" :wildcard-tiles="wildcardTiles" :theme-name="themeName" :selected="selectedIndex === index" :drawn="userDrawnIndex === index" :disabled="!isUserTurn || Boolean(((rulesetId === 'shandong' && (user.isBaoTing || user.isMingLou)) || bloodFlow?.seats[user.seat].locked) && index !== userDrawnIndex)" @choose="handleTileActivation(index, $event)" />
           <span
             v-if="isTileHintVisible(index)"
             class="tile-unseen-badge"
@@ -771,6 +800,7 @@ function onAvatarError(entry: GamePlayer) {
           <button v-if="!bloodFlow || !bloodFlow.seats[user.seat].locked" class="action pass" data-action-role="danger" @click="$emit('pass')"><b>过</b></button>
         </template>
         <template v-else>
+          <button v-if="userCanBaoTing" class="action primary baoting-btn" data-action-role="primary" @click="$emit('baoTing')"><b>报听</b></button>
           <button v-if="userCanMingLou" class="action primary minglou-btn" data-action-role="primary" @click="$emit('mingLou')"><b>明搂</b></button>
           <button v-if="userKongs.length" class="action primary" data-action-role="primary" @click="toggleKongPicker"><b>{{ kongPickerOpen ? '取消' : '杠' }}</b></button>
           <button v-if="userHasWindKong" class="action primary" data-action-role="primary" @click="$emit('windKong')"><b>风杠</b></button>
@@ -795,7 +825,15 @@ function onAvatarError(entry: GamePlayer) {
         </div>
       </div>
       <template v-else-if="activeWaits.any"><strong>听任意</strong><em v-if="rulesetId === 'lotus-legacy'">仅自摸</em><em>{{ activeWaits.remaining }}张</em></template>
-      <template v-else><div class="waiting-tiles"><div v-for="item in activeWaits.tiles" :key="item.tile"><MahjongTile :tile="item.tile" :joker-tiles="jokerTiles" :wildcard-tiles="wildcardTiles" :theme-name="themeName" small disabled /><small>{{ item.remaining }}张</small></div></div></template>
+      <template v-else>
+        <div class="waiting-tiles">
+          <div v-for="item in activeWaits.tiles" :key="item.tile">
+            <MahjongTile :tile="item.tile" :joker-tiles="jokerTiles" :wildcard-tiles="wildcardTiles" :theme-name="themeName" small disabled />
+            <span v-if="item.fan !== undefined || item.multiplier !== undefined" class="wait-fan">{{ item.fan ?? item.multiplier }}番</span>
+            <small>{{ item.remaining }}张</small>
+          </div>
+        </div>
+      </template>
     </div>
 
     <Transition name="modal">
@@ -920,6 +958,102 @@ function onAvatarError(entry: GamePlayer) {
 .joker-guide strong {
   color: #7ce6ff;
   font-weight: 800;
+}
+
+/* 山东麻将顶部中央杠头指示牌 */
+.gang-head-indicator {
+  position: absolute;
+  top: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 35;
+  pointer-events: auto;
+  user-select: none;
+}
+.gang-head-inner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 14px 4px 10px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, rgba(6, 40, 28, 0.94) 0%, rgba(15, 23, 42, 0.94) 100%);
+  border: 1.5px solid rgba(52, 211, 153, 0.85);
+  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55), 0 0 14px rgba(16, 185, 129, 0.35);
+  backdrop-filter: blur(8px);
+}
+.gang-head-badge {
+  display: flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 99px;
+  background: linear-gradient(135deg, #059669, #10b981);
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 1px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+.gang-head-tile-wrap {
+  display: flex;
+  align-items: center;
+}
+.gang-head-tile-wrap :deep(.mahjong-tile),
+.gang-head-tile-wrap .mahjong-tile {
+  --tile-width: clamp(28px, 2.5vw, 36px);
+  filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
+}
+.gang-head-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+.gang-head-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: #a7f3d0;
+  line-height: 1.2;
+}
+.gang-head-sub {
+  font-size: 10px;
+  color: #94a3b8;
+  line-height: 1.2;
+}
+.gang-head-cue-enter-active,
+.gang-head-cue-leave-active {
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.gang-head-cue-enter-from,
+.gang-head-cue-leave-to {
+  opacity: 0;
+  transform: translate(-50%, -10px) scale(0.95);
+}
+@container (max-width: 768px), (max-height: 520px) {
+  .gang-head-indicator {
+    top: 36px;
+  }
+  .gang-head-inner {
+    padding: 2px 10px 2px 6px;
+    gap: 6px;
+  }
+  .gang-head-badge {
+    padding: 2px 6px;
+    font-size: 11px;
+  }
+  .gang-head-tile-wrap :deep(.mahjong-tile),
+  .gang-head-tile-wrap .mahjong-tile {
+    --tile-width: 24px;
+  }
+  .gang-head-sub {
+    display: none;
+  }
+}
+.baoting-btn {
+  background: linear-gradient(135deg, #059669, #10b981) !important;
+  color: #fff !important;
+  border-color: #34d399 !important;
+}
+.baoting-btn:hover {
+  filter: brightness(1.1);
 }
 
 /* 移动端（窄屏/矮屏）：翻精指示牌折叠为一行小徽章，不遮挡任何座位；

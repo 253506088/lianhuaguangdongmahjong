@@ -19,6 +19,7 @@ export interface WinFlags {
   dihu?: boolean
   haidi?: boolean
   isMingLou?: boolean
+  isBaoTing?: boolean
   luanJiang?: boolean
 }
 
@@ -87,6 +88,21 @@ export function createShandongWall(): TileType[] {
     ...TILE_TYPES.flatMap((tile) => Array(4).fill(tile)),
     ...FLOWER_TILES,
   ]
+}
+
+/** 确保牌墙牌尾的杠头不是花牌；若为花牌，则与牌墙内靠前的非花牌对调 */
+export function ensureTailNotFlower(wall: TileType[]) {
+  if (wall.length === 0) return
+  const lastIdx = wall.length - 1
+  if (!isFlowerTile(wall[lastIdx])) return
+  for (let i = 0; i < lastIdx; i += 1) {
+    if (!isFlowerTile(wall[i])) {
+      const temp = wall[i]
+      wall[i] = wall[lastIdx]
+      wall[lastIdx] = temp
+      return
+    }
+  }
 }
 
 /** 拆解剩余手牌为 needed 组面子（刻子或数牌顺子），纯牌无癞子 */
@@ -701,6 +717,8 @@ export function evaluateShandongHand(
   if (flags.isMingLou) {
     patterns.push({ name: '明搂', multiplier: 2 })
     totalMultiplier *= 2
+  } else if (flags.isBaoTing) {
+    patterns.push({ name: '报听', multiplier: 1 })
   }
 
   // 花分计算（图二）
@@ -738,6 +756,7 @@ export function waitingTiles(hand: TileType[], melds: Meld[] = [], options?: Win
 export interface MingLouWaitItem {
   tile: TileType
   remaining: number
+  fan?: number
 }
 
 /**
@@ -754,6 +773,7 @@ export function computeUnseenTileCount(
   userHand: TileType[],
   allPlayers: Array<{ hand: TileType[]; melds: Meld[]; discards: TileType[]; isMingLou?: boolean; seat: number }>,
   userSeat: number,
+  gangHeadTile?: TileType | null,
 ): number {
   let seen = 0
   // 1. 本家手牌
@@ -777,6 +797,10 @@ export function computeUnseenTileCount(
       }
     }
   }
+  // 4. 全局公开的杠头牌
+  if (gangHeadTile && gangHeadTile === tile) {
+    seen++
+  }
   return Math.max(0, 4 - seen)
 }
 
@@ -785,7 +809,8 @@ export function computeUnseenTileCount(
  * 玩家视角内已知的牌包括：
  * 1. 玩家自己的手牌；
  * 2. 所有玩家的牌河弃牌与副露；
- * 3. 其他明搂玩家因亮牌而公开的手牌。
+ * 3. 其他明搂玩家因亮牌而公开的手牌；
+ * 4. 全局公开的杠头牌。
  */
 export function computeMingLouWaits(
   mingLouPlayer: { hand: TileType[]; melds: Meld[]; drawnTileIndex?: number },
@@ -793,6 +818,7 @@ export function computeMingLouWaits(
   allPlayers: Array<{ hand: TileType[]; melds: Meld[]; discards: TileType[]; isMingLou?: boolean; seat: number }>,
   userSeat: number,
   options?: WinCheckOptions | boolean,
+  gangHeadTile?: TileType | null,
 ): MingLouWaitItem[] {
   const hand = mingLouPlayer.hand
   // 如果手牌处于摸牌阶段（length % 3 === 2，如14/11/8/5/2张），需剥离摸到的牌计算基础听口
@@ -802,10 +828,24 @@ export function computeMingLouWaits(
         : hand.slice(0, -1))
     : hand
   const waits = waitingTiles(baseHand, mingLouPlayer.melds, options)
-  return waits.map((tile) => ({
-    tile,
-    remaining: computeUnseenTileCount(tile, userHand, allPlayers, userSeat),
-  }))
+  return waits.map((tile) => {
+    const fullHand = [...baseHand, tile]
+    const evalRes = evaluateShandongHand(
+      mingLouPlayer as any,
+      fullHand,
+      mingLouPlayer.melds,
+      {
+        selfDraw: true,
+        isMingLou: true,
+        luanJiang: Boolean(options && (typeof options === 'object' ? options.luanJiang : options)),
+      },
+    )
+    return {
+      tile,
+      remaining: computeUnseenTileCount(tile, userHand, allPlayers, userSeat, gangHeadTile),
+      fan: evalRes?.totalMultiplier ?? 2,
+    }
+  })
 }
 
 /** 吃牌判定 */

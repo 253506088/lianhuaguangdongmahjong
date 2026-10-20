@@ -18,12 +18,13 @@ export type ShandongTurnAction =
   | { kind: 'win' }
   | { kind: 'added-kong'; meldIndex: number }
   | { kind: 'concealed-kong'; tile: TileType }
-  | { kind: 'discard'; handIndex: number; declareMingLou?: boolean }
+  | { kind: 'discard'; handIndex: number; declareMingLou?: boolean; declareBaoTing?: boolean }
 
 export interface ShandongTurnContext {
   hand: TileType[]
   melds: Meld[]
   isMingLou?: boolean
+  isBaoTing?: boolean
   wallCount?: number
   skipDraw?: boolean
   luanJiang?: boolean
@@ -38,6 +39,7 @@ export interface ShandongHuContext {
   canGang: boolean
   chiOptions: ChiMeld[]
   isMingLou?: boolean
+  isBaoTing?: boolean
 }
 
 export interface ShandongClaimContext {
@@ -49,6 +51,7 @@ export interface ShandongClaimContext {
   from: number
   chiOptions: ChiMeld[]
   isMingLou?: boolean
+  isBaoTing?: boolean
 }
 
 export interface ShandongChiContext {
@@ -64,6 +67,7 @@ export interface ShandongRobKongContext {
   melds: Meld[]
   tile: TileType
   from: number
+  isBaoTing?: boolean
   luanJiang?: boolean
 }
 
@@ -92,6 +96,7 @@ export interface ShandongHumanBridge {
   canHu: Ref<boolean>
   canKong: Ref<TileType[]>
   canMingLou: Ref<boolean>
+  canBaoTing?: Ref<boolean>
   actionPrompt: Ref<ActionPrompt | null>
   selectedIndex: Ref<number>
   drawnThisTurn: Ref<boolean>
@@ -189,8 +194,8 @@ export class ShandongHumanController implements ShandongController {
   hasPendingChi() { return this.chiAction.hasPending() }
   hasPendingRobKong() { return this.robKongAction.hasPending() }
 
-  resolveDiscard(index: number, declareMingLou = false) {
-    if (!this.turnAction.resolve({ kind: 'discard', handIndex: index, declareMingLou })) return
+  resolveDiscard(index: number, declareMingLou = false, declareBaoTing = false) {
+    if (!this.turnAction.resolve({ kind: 'discard', handIndex: index, declareMingLou, declareBaoTing })) return
     this._cleanupTurn()
   }
   resolveWin() {
@@ -278,7 +283,7 @@ export class ShandongAiController implements ShandongController {
 
   async requestHu(ctx: ShandongHuContext): Promise<ShandongHuAction> {
     await this.wait(Math.min(this.thinkMs, 600))
-    if (ctx.isMingLou) return { kind: 'pass' }
+    if (ctx.isMingLou || !ctx.isBaoTing) return { kind: 'pass' }
     return { kind: 'hu' }
   }
 
@@ -294,6 +299,7 @@ export class ShandongAiController implements ShandongController {
       canGang: ctx.canGang,
       chiOptions: ctx.chiOptions,
       isMingLou: ctx.isMingLou,
+      isBaoTing: ctx.isBaoTing,
     })
   }
 
@@ -307,6 +313,7 @@ export class ShandongAiController implements ShandongController {
 
   async requestRobKong(ctx: ShandongRobKongContext): Promise<ShandongRobKongAction> {
     await this.wait(Math.min(this.thinkMs, 500))
+    if (!ctx.isBaoTing) return 'pass'
     return decideRobKong(ctx.hand, ctx.tile, ctx.melds, { luanJiang: ctx.luanJiang })
   }
 

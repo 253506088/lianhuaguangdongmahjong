@@ -517,9 +517,14 @@ function addWall() {
     const slot = wallStackSlot(stackIndex)
     const y = .41 + layer * .47
     const quat = new THREE.Quaternion().setFromEuler(new THREE.Euler(0, slot.rotationY, 0))
-    // 背朝上：绕 X 转 180°，使 base 底面的牌背（backMaterial）朝上（与暗杠首尾一致）。
-    quat.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0)))
-    addTableTile(new THREE.Vector3(slot.x, y, slot.z), quat, null)
+    // 山东麻将：牌尾杠头牌公开翻开展示（面朝上）
+    const isGangHead = Boolean(props.gangHeadTile && index === tiles.length - 1)
+    const face = isGangHead ? props.gangHeadTile : null
+    if (!isGangHead) {
+      // 背朝上：绕 X 转 180°，使 base 底面的牌背（backMaterial）朝上（与暗杠首尾一致）。
+      quat.multiply(new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI, 0, 0)))
+    }
+    addTableTile(new THREE.Vector3(slot.x, y, slot.z), quat, face)
   })
   addFlipIndicator()
 }

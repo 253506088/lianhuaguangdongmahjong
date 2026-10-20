@@ -166,3 +166,14 @@ __pycache__/
 docs/evidence/
 work/
 .dsh-vision-router/
+
+# IDE & Editor / OS
+.idea/
+.vscode/
+*.sw?
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+.DS_Store
+Thumbs.db

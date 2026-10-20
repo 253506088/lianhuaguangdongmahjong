@@ -6,9 +6,11 @@ import type { ShandongGameState } from './shandongState'
 import { playDiscardName } from '../../shared/runtime/discardAudio'
 import { sortTiles } from '../../core/rules/tiles'
 
+export type ShandongDrawReason = 'normal' | 'flower' | 'kong'
+
 interface ShandongTileFlowOptions {
   state: ShandongGameState
-  drawFromWall(fromTail?: boolean): TileType | null
+  drawFromWall(reason?: ShandongDrawReason | boolean): TileType | null
   endDraw(): unknown
   endGame(winnerIndex: number, options?: { winTile?: TileType; selfDraw?: boolean }): unknown
   showTableAction(type: TableActionType, actorIndex: number, sourceIndex: number | null, tile: TileType, meldIndex: number): void
@@ -24,15 +26,15 @@ export function createShandongTileFlow(options: ShandongTileFlowOptions) {
 
   /**
    * 摸牌并处理花牌补花：
-   * 抓到花牌立即亮出（加入 melds of type flower），并在牌尾补摸一张，直到手里没有花牌为止。
+   * 抓到花牌立即亮出（加入 melds of type flower），并在杠头前补摸一张（绝不摸走或改变公开的杠头），直到手里没有花牌为止。
    */
-  async function drawFor(playerIndex: number, fromTail = false): Promise<boolean> {
+  async function drawFor(playerIndex: number, reason: ShandongDrawReason | boolean = 'normal'): Promise<boolean> {
     if (state.wall.value.length === 0) {
       options.endDraw()
       return false
     }
 
-    const tile = options.drawFromWall(fromTail)
+    const tile = options.drawFromWall(reason === 'normal' ? false : reason)
     if (!tile) {
       options.endDraw()
       return false
@@ -55,8 +57,8 @@ export function createShandongTileFlow(options: ShandongTileFlowOptions) {
       }
 
       if (state.phase.value === 'settled') return false
-      // 从牌尾补摸一张
-      return drawFor(playerIndex, true)
+      // 补花摸牌：从杠头前补摸一张（绝不摸走或改变公开的杠头）
+      return drawFor(playerIndex, 'flower')
     }
 
     // 摸到正常数牌/字牌：过胡解圈、过碰解圈

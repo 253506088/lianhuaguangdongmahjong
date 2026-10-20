@@ -13,6 +13,7 @@ interface ShandongHumanOptions {
   canUserHu(): boolean
   getUserKongs(): TileType[]
   userCanMingLou(): boolean
+  userCanBaoTing?(): boolean
   stopCountdown(): void
   startTurnCountdown(): void
   discardTile(playerIndex: number, handIndex: number): unknown
@@ -27,9 +28,18 @@ export function createShandongHuman(options: ShandongHumanOptions) {
   const { state, humanController } = options
 
   let isDiscarding = false
+  let pendingDeclareBaoTing = false
+  let pendingDeclareMingLou = false
 
   function selectTile(index: number) {
-    if (!options.isUserTurn() || (!humanController.hasPendingTurn() && state.mingLouPlayers.value.has(0))) return
+    if (!options.isUserTurn()) return
+    const user = options.getUser()
+    if (!user) return
+    const isLocked = state.mingLouPlayers.value.has(0) || state.baoTingPlayers.value.has(0)
+    if (isLocked) {
+      const drawnIndex = user.drawnTileIndex !== undefined && user.drawnTileIndex >= 0 ? user.drawnTileIndex : user.hand.length - 1
+      if (index !== drawnIndex) return
+    }
     state.selectedIndex.value = index
     options.playSound('click.mp3', 0.65)
   }
@@ -43,10 +53,19 @@ export function createShandongHuman(options: ShandongHumanOptions) {
     if (!humanController.hasPendingTurn()) return
     const user = options.getUser()
     if (!user || index < 0 || index >= user.hand.length) return
+    const isLocked = state.mingLouPlayers.value.has(0) || state.baoTingPlayers.value.has(0)
+    if (isLocked) {
+      const drawnIndex = user.drawnTileIndex !== undefined && user.drawnTileIndex >= 0 ? user.drawnTileIndex : user.hand.length - 1
+      if (index !== drawnIndex) return
+    }
     isDiscarding = true
+    const declareMingLou = pendingDeclareMingLou
+    const declareBaoTing = pendingDeclareBaoTing
+    pendingDeclareMingLou = false
+    pendingDeclareBaoTing = false
     clearUserSelection()
     try {
-      humanController.resolveDiscard(index)
+      humanController.resolveDiscard(index, declareMingLou, declareBaoTing)
     } finally {
       setTimeout(() => { isDiscarding = false }, 250)
     }
@@ -54,13 +73,27 @@ export function createShandongHuman(options: ShandongHumanOptions) {
 
   function userMingLou() {
     if (!options.userCanMingLou()) return
-    state.mingLouPlayers.value.add(0)
-    if (state.players[0]) state.players[0].isMingLou = true
-    options.announce('明搂！', 'gold')
-    options.playSound('chihushandian.ogg')
-    // 如果已有选中手牌，则顺势切牌并打出
+    pendingDeclareMingLou = true
+    pendingDeclareBaoTing = false
+    // 如果已有选中手牌，则顺势切牌并打出报明楼
     if (state.selectedIndex.value >= 0) {
       userDiscard(state.selectedIndex.value)
+    } else {
+      options.announce('请选择一张牌打出明搂', 'gold')
+      options.playSound('click.mp3', 0.65)
+    }
+  }
+
+  function userBaoTing() {
+    if (options.userCanBaoTing && !options.userCanBaoTing()) return
+    pendingDeclareBaoTing = true
+    pendingDeclareMingLou = false
+    // 如果已有选中手牌，则顺势切牌并打出报听
+    if (state.selectedIndex.value >= 0) {
+      userDiscard(state.selectedIndex.value)
+    } else {
+      options.announce('请选择一张牌打出报听', 'emerald')
+      options.playSound('click.mp3', 0.65)
     }
   }
 
@@ -99,18 +132,22 @@ export function createShandongHuman(options: ShandongHumanOptions) {
 
   function userHu() {
     if (humanController.hasPendingRobKong()) {
+      if (!state.baoTingPlayers.value.has(0)) return
       options.stopCountdown()
       return humanController.resolveRobKongAction('win')
     }
     if (humanController.hasPendingHu()) {
+      if (!state.baoTingPlayers.value.has(0)) return
       options.stopCountdown()
       return humanController.resolveHu({ kind: 'hu' })
     }
     if (humanController.hasPendingTurn()) {
+      if (!state.baoTingPlayers.value.has(0) && !state.mingLouPlayers.value.has(0)) return
       options.stopCountdown()
       return humanController.resolveWin()
     }
     if (options.canUserHu()) {
+      if (!state.baoTingPlayers.value.has(0) && !state.mingLouPlayers.value.has(0)) return
       options.stopCountdown()
       const user = options.getUser()
       const winTile = user?.drawnTileIndex !== undefined && user.drawnTileIndex >= 0
@@ -142,6 +179,7 @@ export function createShandongHuman(options: ShandongHumanOptions) {
     clearUserSelection,
     userDiscard,
     userMingLou,
+    userBaoTing,
     userPass,
     userPeng,
     userGangFromDiscard,

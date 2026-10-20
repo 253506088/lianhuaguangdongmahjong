@@ -21,10 +21,12 @@ import {
   type ChiMeld,
 } from './shandongRules'
 
+import type { ShandongDrawReason } from './shandongTileFlow'
+
 interface ShandongTurnOrchestratorOptions {
   state: ShandongGameState
   controllers: ShandongController[]
-  drawFor(playerIndex: number, fromTail?: boolean): Promise<boolean>
+  drawFor(playerIndex: number, reason?: ShandongDrawReason | boolean): Promise<boolean>
   discardTile(playerIndex: number, handIndex: number): void
   endDraw(): unknown
   endGame(winnerIndex: number, options?: EndGameOptions): unknown
@@ -53,41 +55,58 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
 
     // 摸牌（若未跳过）
     if (!turnOptions.skipDraw) {
-      const drawn = await options.drawFor(playerIndex, turnOptions.fromTail)
+      const drawn = await options.drawFor(playerIndex, turnOptions.fromTail ? 'kong' : 'normal')
       if (!drawn || (state.phase.value as string) === 'settled') return
     } else if (turnOptions.preDrawn && playerIndex === 0) {
       state.userDrewThisTurn.value = true
     }
 
     const isMingLou = state.mingLouPlayers.value.has(playerIndex)
+    const isBaoTing = state.baoTingPlayers.value.has(playerIndex)
 
-    // 若明搂：只能自摸胡牌；不胡则必须摸打（打出最后一张摸到的牌）
-    if (isMingLou) {
-      if (canWinOnSelfDraw(player.hand, player.melds, { luanJiang: state.luanJiang.value })) {
-        options.announce(`${player.name} 自摸！`, 'gold')
-        options.endGame(playerIndex, { selfDraw: true, winTile: player.hand[player.hand.length - 1] })
+    // 若处于明搂或报听状态：只能自摸胡牌；不胡则必须摸打（打出摸到的那张牌）
+    if (isMingLou || isBaoTing) {
+      if (playerIndex !== 0) {
+        if (canWinOnSelfDraw(player.hand, player.melds, { luanJiang: state.luanJiang.value })) {
+          options.announce(`${player.name} 自摸！`, 'gold')
+          options.endGame(playerIndex, { selfDraw: true, winTile: player.hand[player.hand.length - 1] })
+          return
+        }
+
+        await options.wait(800)
+        if ((state.phase.value as string) === 'settled') return
+        options.discardTile(playerIndex, player.hand.length - 1)
         return
+      } else {
+        // 真人玩家处于报听或明楼状态：
+        // 1. 若当前摸牌达成自摸胡牌，交由正常回合逻辑提供【胡】按钮供玩家决策
+        const canHu = canWinOnSelfDraw(player.hand, player.melds, { luanJiang: state.luanJiang.value })
+        if (!canHu) {
+          // 2. 只要没胡牌，摸到手里的牌展示片刻后直接打出（自动摸打）
+          await options.wait(700)
+          if ((state.phase.value as string) === 'settled' || state.currentPlayer.value !== 0) return
+          const drawnIdx = player.drawnTileIndex >= 0 ? player.drawnTileIndex : player.hand.length - 1
+          options.discardTile(0, drawnIdx)
+          return
+        }
       }
-
-      await options.wait(800)
-      if ((state.phase.value as string) === 'settled') return
-      options.discardTile(playerIndex, player.hand.length - 1)
-      return
     }
 
     // 正常回合：请求玩家控制器决策
     const decision: ShandongTurnAction = await controllers[playerIndex].requestTurn({
       hand: player.hand,
       melds: player.melds,
-      isMingLou: false,
+      isMingLou,
+      isBaoTing,
       wallCount: state.wall.value.length,
       skipDraw: Boolean(turnOptions.skipDraw) && !Boolean(turnOptions.preDrawn),
       luanJiang: state.luanJiang.value,
     })
 
-    if ((state.phase.value as string) === 'settled') return
+    if ((state.phase.value as string) === 'settled' || !decision) return
 
     if (decision.kind === 'win') {
+      if (!isMingLou && !isBaoTing) return
       const winTile = player.drawnTileIndex >= 0 ? player.hand[player.drawnTileIndex] : player.hand[player.hand.length - 1]
       options.announce(`${player.name} 自摸！`, 'gold')
       options.endGame(playerIndex, { selfDraw: true, winTile })
@@ -95,11 +114,13 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
     }
 
     if (decision.kind === 'concealed-kong') {
+      if (isMingLou || isBaoTing) return
       await performConcealedKong(playerIndex, decision.tile)
       return
     }
 
     if (decision.kind === 'added-kong') {
+      if (isMingLou || isBaoTing) return
       await declareAddedKong(playerIndex, decision.meldIndex)
       return
     }
@@ -111,6 +132,12 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
         options.announce(`${player.name} 明搂！`, 'gold')
         options.playSound('chihushandian.ogg')
         await options.wait(1000)
+      } else if (decision.declareBaoTing) {
+        state.baoTingPlayers.value.add(playerIndex)
+        state.players[playerIndex].isBaoTing = true
+        options.announce(`${player.name} 报听！`, 'emerald')
+        options.playSound('chihushandian.ogg')
+        await options.wait(800)
       }
       options.discardTile(playerIndex, decision.handIndex)
     }
@@ -149,8 +176,8 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
     const robbers: number[] = []
     for (let i = 0; i < state.players.length; i += 1) {
       if (i !== playerIndex && canRobKong(state.players[i].hand, tile, state.players[i].melds, { luanJiang: state.luanJiang.value })) {
-        // 明搂者不可吃胡/抢杠胡，只能自摸
-        if (!state.mingLouPlayers.value.has(i)) {
+        // 明搂者不可吃胡/抢杠胡，只能自摸；且必须已报听才可胡
+        if (!state.mingLouPlayers.value.has(i) && state.baoTingPlayers.value.has(i)) {
           robbers.push(i)
         }
       }
@@ -201,6 +228,8 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
       if (state.passedHuPlayers.value.has(i)) continue
       // 明搂限制：明搂后只能自摸胡，不可点炮胡
       if (state.mingLouPlayers.value.has(i)) continue
+      // 报听限制：必须已报听才可点炮胡（未报听不能胡）
+      if (!state.baoTingPlayers.value.has(i)) continue
 
       if (canWinOnDiscard(state.players[i].hand, tile, state.players[i].melds, { luanJiang: state.luanJiang.value })) {
         candidates.push(i)
@@ -221,9 +250,10 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
   async function offerHu(playerIndex: number, from: number, tile: TileType) {
     const player = state.players[playerIndex]
     const nextPlayer = (from + 1) % state.players.length
-    const canPengNow = canPeng(player.hand, tile) && !state.passedPengTiles.value.get(playerIndex)?.has(tile)
-    const canGangNow = canGangFromDiscard(player.hand, tile)
-    const chiOptions = playerIndex === nextPlayer ? canChi(player.hand, tile) : []
+    const isLocked = state.mingLouPlayers.value.has(playerIndex) || state.baoTingPlayers.value.has(playerIndex)
+    const canPengNow = !isLocked && canPeng(player.hand, tile) && !state.passedPengTiles.value.get(playerIndex)?.has(tile)
+    const canGangNow = !isLocked && canGangFromDiscard(player.hand, tile)
+    const chiOptions = (!isLocked && playerIndex === nextPlayer) ? canChi(player.hand, tile) : []
 
     const action: ShandongHuAction = await controllers[playerIndex].requestHu({
       hand: player.hand,
@@ -234,6 +264,7 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
       canGang: canGangNow,
       chiOptions,
       isMingLou: state.mingLouPlayers.value.has(playerIndex),
+      isBaoTing: state.baoTingPlayers.value.has(playerIndex),
     })
 
     if (state.phase.value === 'settled') return
@@ -276,7 +307,7 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
     // 检查其余人是否有杠/碰
     for (let i = 0; i < state.players.length; i += 1) {
       if (i === from) continue
-      if (state.mingLouPlayers.value.has(i)) continue // 明搂者不碰不杠
+      if (state.mingLouPlayers.value.has(i) || state.baoTingPlayers.value.has(i)) continue // 明搂/报听者不碰不杠
 
       const player = state.players[i]
       const canGangNow = canGangFromDiscard(player.hand, tile)
@@ -293,6 +324,7 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
           canGang: canGangNow,
           chiOptions,
           isMingLou: false,
+          isBaoTing: false,
         })
 
         if (state.phase.value === 'settled') return
@@ -321,7 +353,7 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
 
     // 检查下家吃牌
     const nextP = state.players[nextPlayer]
-    if (!state.mingLouPlayers.value.has(nextPlayer)) {
+    if (!state.mingLouPlayers.value.has(nextPlayer) && !state.baoTingPlayers.value.has(nextPlayer)) {
       const chiOptions = canChi(nextP.hand, tile)
       if (chiOptions.length > 0) {
         const chiAction = await controllers[nextPlayer].requestChi({

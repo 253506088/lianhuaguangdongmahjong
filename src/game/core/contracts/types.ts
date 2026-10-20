@@ -36,6 +36,7 @@ export interface GamePlayer {
   redCount: number
   drawnTileIndex: number
   isMingLou?: boolean
+  isBaoTing?: boolean
 }
 
 export type TableActionType =
