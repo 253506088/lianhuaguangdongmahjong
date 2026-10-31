@@ -1,4 +1,4 @@
-import { createApp, h, reactive } from 'vue'
+import { createApp, h, reactive, ref } from 'vue'
 import '../../../src/style.css'
 import GameTableHud from '../../../src/components/table/GameTableHud.vue'
 import GameShellHeader from '../../../src/components/shell/GameShellHeader.vue'
@@ -13,11 +13,16 @@ const query = new URLSearchParams(location.search)
 const requestedTheme = query.get('theme')
 const theme = isTableThemeName(requestedTheme) ? requestedTheme : 'jade'
 const max = query.has('max')
+const mingLou = query.has('minglou')
+const gangHeadTile = ref<TileType | null>(query.has('ganghead') ? 'm5' : null)
 const players = reactive<GamePlayer[]>([0, 1, 2, 3].map(seat => ({
   seat, name: ['本家', '下家', '对家', '上家'][seat], avatar: defaultAvatarForSeat(seat), score: 2000,
-  hand: ['m2','m3','m4','m6','m7','m8','p2','p3','p4','s8'] as TileType[],
+  isMingLou: mingLou && seat === 2,
+  hand: (mingLou && seat === 2
+    ? ['m1','m2','m3','m4','m5','m6','p1','p2','p3','s4','s5','s6','east']
+    : ['m2','m3','m4','m6','m7','m8','p2','p3','p4','s8']) as TileType[],
   melds: [
-    { type: 'peng', tile: 's1', from: (seat + 1) % 4, tiles: ['s1','s1','s1'] },
+    ...(mingLou && seat === 2 ? [] : [{ type: 'peng', tile: 's1', from: (seat + 1) % 4, tiles: ['s1','s1','s1'] }]),
     ...(max ? seat === 0 ? FLOWER_TILES : [] : FLOWER_TILES.slice(seat * 2, seat * 2 + 2))
       .map(tile => ({ type: 'flower', tile, tiles: [tile] })),
   ] as Meld[],
@@ -37,11 +42,12 @@ const props = {
 Object.assign(window, { flowerFixture: {
   reset: () => players.forEach(p => { p.melds = p.melds.filter(m => m.type !== 'flower') }),
   draw: (seat: number, tile: TileType) => players[seat].melds.push({ type: 'flower', tile, tiles: [tile] }),
+  setGangHead: (tile: TileType | null) => { gangHeadTile.value = tile },
 } })
 createApp({ setup() { useAudio(); }, render: () => h('main', { class: 'game-app', 'data-table-theme': theme,
   style: themePresentationCssVariables(themePresentationByName(theme)) },
   [h('div', { class: 'has-three-scene' }, [
     h(GameShellHeader, { gameMode: 'local', phase: 'playing', hasPlayers: true,
       matchName: '东风场', roundLabel: '东一局', honba: 0, roomId: '', signalQuality: 3, themeName: theme }),
-    h(GameTableHud, props),
+    h(GameTableHud, { ...props, gangHeadTile: gangHeadTile.value }),
   ])]) }).mount('#app')
