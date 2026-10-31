@@ -854,7 +854,9 @@ button { font: inherit; }
 .picker-options b { color: #eadbb7; font: 800 17px "Noto Serif SC", serif; }
 .picker-options b em { margin-left: 7px; padding: 2px 7px; border: 1px solid rgba(211,174,87,.45); border-radius: 9px; color: #dcb75f; font: 10px sans-serif; font-style: normal; vertical-align: 2px; }
 .picker-options small { margin-top: 5px; overflow: hidden; color: #91a399; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
-.shandong-sub-options { display: flex; gap: 8px; margin-top: 8px; }
+.shandong-sub-options { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.sub-option-group { display: flex; align-items: center; gap: 8px; }
+.sub-option-label { color: #dcb75f; font-size: 12px; font-weight: 700; min-width: 28px; }
 .sub-option-btn { display: inline-flex; align-items: center; justify-content: center; padding: 4px 11px; border: 1px solid rgba(211,174,87,.32); border-radius: 4px; background: rgba(255,255,255,.06); color: #cfc3a5; font-size: 12px; font-weight: 700; cursor: pointer; transition: all .15s ease; user-select: none; }
 .sub-option-btn:hover { border-color: rgba(211,174,87,.65); background: rgba(255,255,255,.12); color: #fff; }
 .sub-option-btn.active { border-color: #d5ab54; background: linear-gradient(135deg, rgba(213,171,84,.38), rgba(185,135,55,.55)); color: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }

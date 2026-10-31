@@ -73,6 +73,15 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
           return
         }
 
+        // 若已报听但尚未明楼，AI 有小概率升级为明楼博自摸加倍（纯自摸，不可点炮）
+        if (!isMingLou && isBaoTing && state.wall.value.length > 20 && Math.random() < 0.15) {
+          state.mingLouPlayers.value.add(playerIndex)
+          state.players[playerIndex].isMingLou = true
+          options.announce(`${player.name} 明搂！`, 'gold')
+          options.playSound('chihushandian.ogg')
+          await options.wait(800)
+        }
+
         await options.wait(800)
         if ((state.phase.value as string) === 'settled') return
         options.discardTile(playerIndex, player.hand.length - 1)
@@ -253,7 +262,7 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
     const isLocked = state.mingLouPlayers.value.has(playerIndex) || state.baoTingPlayers.value.has(playerIndex)
     const canPengNow = !isLocked && canPeng(player.hand, tile) && !state.passedPengTiles.value.get(playerIndex)?.has(tile)
     const canGangNow = !isLocked && canGangFromDiscard(player.hand, tile)
-    const chiOptions = (!isLocked && playerIndex === nextPlayer) ? canChi(player.hand, tile) : []
+    const chiOptions = (!isLocked && state.allowChi.value && playerIndex === nextPlayer) ? canChi(player.hand, tile) : []
 
     const action: ShandongHuAction = await controllers[playerIndex].requestHu({
       hand: player.hand,
@@ -312,7 +321,7 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
       const player = state.players[i]
       const canGangNow = canGangFromDiscard(player.hand, tile)
       const canPengNow = canPeng(player.hand, tile) && !state.passedPengTiles.value.get(i)?.has(tile)
-      const chiOptions = i === nextPlayer ? canChi(player.hand, tile) : []
+      const chiOptions = (state.allowChi.value && i === nextPlayer) ? canChi(player.hand, tile) : []
 
       if (canGangNow || canPengNow) {
         const action: ShandongClaimAction = await controllers[i].requestClaim({
@@ -351,9 +360,9 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
       }
     }
 
-    // 检查下家吃牌
+    // 检查下家吃牌（若规则允许吃）
     const nextP = state.players[nextPlayer]
-    if (!state.mingLouPlayers.value.has(nextPlayer) && !state.baoTingPlayers.value.has(nextPlayer)) {
+    if (state.allowChi.value && !state.mingLouPlayers.value.has(nextPlayer) && !state.baoTingPlayers.value.has(nextPlayer)) {
       const chiOptions = canChi(nextP.hand, tile)
       if (chiOptions.length > 0) {
         const chiAction = await controllers[nextPlayer].requestChi({

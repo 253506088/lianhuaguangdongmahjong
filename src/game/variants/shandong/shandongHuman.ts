@@ -73,6 +73,18 @@ export function createShandongHuman(options: ShandongHumanOptions) {
 
   function userMingLou() {
     if (!options.userCanMingLou()) return
+    const user = options.getUser()
+    if (!user) return
+
+    // 报听牌之后明楼：手牌已锁定，直接亮开手牌就地明楼（从此不能点炮，纯自摸）
+    if (state.baoTingPlayers.value.has(user.seat)) {
+      state.mingLouPlayers.value.add(user.seat)
+      user.isMingLou = true
+      options.announce(`${user.name} 明搂！`, 'gold')
+      options.playSound('chihushandian.ogg')
+      return
+    }
+
     pendingDeclareMingLou = true
     pendingDeclareBaoTing = false
     // 如果已有选中手牌，则顺势切牌并打出报明楼

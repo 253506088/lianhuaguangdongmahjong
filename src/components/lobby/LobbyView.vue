@@ -21,6 +21,7 @@ interface Props {
   selectedMatch: MatchType
   selectedRule: RuleVariant
   shandongJiang?: '258' | 'luan'
+  shandongAllowChi?: boolean
   matchName: string
   storedSession: StoredSession | null
   roomId: string
@@ -66,6 +67,7 @@ const emit = defineEmits<{
   'update:selectedMatch': [value: MatchType]
   'update:selectedRule': [value: RuleVariant]
   'update:shandongJiang': [value: '258' | 'luan']
+  'update:shandongAllowChi': [value: boolean]
   'update:nicknameInput': [value: string]
   'update:joinCode': [value: string]
   'update:animeCharacterId': [value: CharacterId]
@@ -100,12 +102,22 @@ const matchOption = computed(() => props.selectedMatch === 'east'
   ? { name: '东风场', description: '一场 4 局' }
   : { name: '半庄场', description: '一场 8 局' })
 const ruleOption = computed(() => getRuleVariant(props.selectedRule))
-const ruleDescription = computed(() => props.selectedRule === 'shandong'
-  ? `${props.shandongJiang === 'luan' ? '乱将' : '258掌将'} · 144张牌（含花） · 明搂`
-  : ruleOption.value.highlights.slice(0, 2).join(' · '))
-const startButtonRuleText = computed(() => props.selectedRule === 'shandong'
-  ? `${ruleOption.value.name}（${props.shandongJiang === 'luan' ? '乱将' : '258掌将'}）`
-  : ruleOption.value.name)
+const ruleDescription = computed(() => {
+  if (props.selectedRule === 'shandong') {
+    const jiang = props.shandongJiang === 'luan' ? '乱将' : '258掌将'
+    const chi = props.shandongAllowChi === false ? '不可吃' : '可吃'
+    return `${jiang} · ${chi} · 144张牌（含花） · 明搂`
+  }
+  return ruleOption.value.highlights.slice(0, 2).join(' · ')
+})
+const startButtonRuleText = computed(() => {
+  if (props.selectedRule === 'shandong') {
+    const jiang = props.shandongJiang === 'luan' ? '乱将' : '258掌将'
+    const chi = props.shandongAllowChi === false ? '不可吃' : '可吃'
+    return `${ruleOption.value.name}（${jiang}·${chi}）`
+  }
+  return ruleOption.value.name
+})
 const dialogTitle = computed(() => ({
   create: '创建房间',
   join: '加入房间',
@@ -129,9 +141,14 @@ function selectMatch(value: MatchType) {
   closePicker()
 }
 
-function selectRule(value: RuleVariant, jiang?: '258' | 'luan') {
+function selectRule(value: RuleVariant, jiang?: '258' | 'luan', allowChi?: boolean) {
   emit('update:selectedRule', value)
-  if (jiang) emit('update:shandongJiang', jiang)
+  if (jiang) {
+    emit('update:shandongJiang', jiang)
+  }
+  if (allowChi !== undefined) {
+    emit('update:shandongAllowChi', allowChi)
+  }
   closePicker()
 }
 
@@ -355,7 +372,16 @@ function toggleWakuDemoAuth() {
       />
 
       <MatchTypePicker v-else-if="dialog === 'match'" :model-value="selectedMatch" @close="closePicker" @confirm="selectMatch" />
-      <RuleVariantPicker v-else :shandong-jiang="shandongJiang" :model-value="selectedRule" :allow-blood-flow="bloodFlowEnabled(gameMode === 'local' ? 'local' : 'ws')" @close="closePicker" @confirm="selectRule" @view-rules="viewRules" />
+      <RuleVariantPicker
+        v-else
+        :model-value="selectedRule"
+        :shandong-jiang="shandongJiang"
+        :shandong-allow-chi="shandongAllowChi"
+        :allow-blood-flow="bloodFlowEnabled(gameMode === 'local' ? 'local' : 'ws')"
+        @close="closePicker"
+        @confirm="selectRule"
+        @view-rules="viewRules"
+      />
     </LobbyDialog>
 
   </section>

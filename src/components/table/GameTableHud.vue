@@ -337,7 +337,7 @@ const hoveredWaits = computed(() => hoveredDiscard.value
   ? props.userTingOptions.find((option) => option.discard === hoveredDiscard.value) ?? null
   : null)
 const activeWaits = computed(() => hoveredWaits.value || props.userDiscardWaits
-  || (props.selectedIndex < 0 && (props.bloodFlow || !props.isUserTurn) ? props.userCurrentWaits : null))
+  || (props.selectedIndex < 0 && (props.bloodFlow || !props.isUserTurn || (props.rulesetId === 'shandong' && (props.user?.isBaoTing || props.user?.isMingLou))) ? props.userCurrentWaits : null))
 const bloodFlowWaitTiles = computed(() => (activeWaits.value?.tiles ?? []).map(item => {
   const scores = activeWaits.value?.discard ? props.bloodFlow?.discardWaitScores?.[activeWaits.value.discard] : props.bloodFlow?.waits
   const score = scores?.find(wait => wait.tile === item.tile)

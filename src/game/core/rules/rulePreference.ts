@@ -2,6 +2,7 @@ import type { RuleVariant } from './ruleVariants'
 
 export const RULE_PREFERENCE_STORAGE_KEY = 'lianhua-guangma:selected-rule:v1'
 export const SHANDONG_JIANG_STORAGE_KEY = 'lianhua-guangma:shandong-jiang:v1'
+export const SHANDONG_CHI_STORAGE_KEY = 'lianhua-guangma:shandong-chi:v1'
 
 const VALID_RULE_VARIANTS: ReadonlySet<string> = new Set([
   'lotus-classic',
@@ -63,6 +64,32 @@ export function saveShandongJiangPreference(
 ): void {
   try {
     storage?.setItem(SHANDONG_JIANG_STORAGE_KEY, jiang)
+  } catch {
+    // 存储不可用时静默降级
+  }
+}
+
+/** 读取保存的山东麻将是否允许吃牌规则（默认允许） */
+export function readShandongAllowChiPreference(
+  storage: StorageLike | undefined = typeof localStorage === 'undefined' ? undefined : localStorage,
+): boolean {
+  if (!storage) return true
+  try {
+    const stored = storage.getItem(SHANDONG_CHI_STORAGE_KEY)
+    if (stored === 'false') return false
+    return true
+  } catch {
+    return true
+  }
+}
+
+/** 保存山东麻将是否允许吃牌规则到本地存储 */
+export function saveShandongAllowChiPreference(
+  allowChi: boolean,
+  storage: StorageLike | undefined = typeof localStorage === 'undefined' ? undefined : localStorage,
+): void {
+  try {
+    storage?.setItem(SHANDONG_CHI_STORAGE_KEY, String(allowChi))
   } catch {
     // 存储不可用时静默降级
   }

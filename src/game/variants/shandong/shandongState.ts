@@ -30,6 +30,8 @@ export function createShandongGameState() {
     roundFirstDiscard: ref(false),
     /** 是否为乱将（任意将）规则 */
     luanJiang: ref(false),
+    /** 是否允许吃牌 */
+    allowChi: ref(true),
     /** 山东麻将公开杠头牌（开杠即摸，有人杠走后翻开下一张） */
     gangHeadTile: ref<TileType | null>(null),
   }

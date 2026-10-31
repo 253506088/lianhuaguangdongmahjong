@@ -13,6 +13,7 @@ import ReplayListView from './components/replay/ReplayListView.vue'
 import { useGame } from './game/variants/guangma/game'
 import { useLotusGame } from './game/variants/lotus/lotusGame'
 import { useBloodFlowGame } from './game/variants/lotus/bloodFlow/useBloodFlowGame'
+import { readShandongAllowChiPreference, saveShandongAllowChiPreference } from './game/core/rules/rulePreference'
 import { useShandongGame } from './game/variants/shandong/shandongGame'
 import { readRuleVariantPreference, saveRuleVariantPreference, readShandongJiangPreference, saveShandongJiangPreference } from './game/core/rules/rulePreference'
 import { useBloodFlowRemoteGame } from './game/variants/lotus/bloodFlow/useBloodFlowRemoteGame'
@@ -75,8 +76,10 @@ const resultVisible = ref(true)
 const selectedMatch = ref<MatchType>('east')
 const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)
 const shandongJiang = ref<'258' | 'luan'>(readShandongJiangPreference())
-watch(selectedRule, saveRuleVariantPreference)
-watch(shandongJiang, saveShandongJiangPreference)
+watch(selectedRule, value => saveRuleVariantPreference(value))
+watch(shandongJiang, value => saveShandongJiangPreference(value))
+const shandongAllowChi = ref(readShandongAllowChiPreference())
+watch(shandongAllowChi, value => saveShandongAllowChiPreference(value))
 const gameTableReady = ref(false)
 let tableReadyPromise: Promise<void> | null = null
 let tableReadyResolve: (() => void) | null = null
@@ -302,6 +305,7 @@ const shandongGame = useShandongGame({
   getTableThemeName: () => tableThemeName.value,
   animeFixedTts: localAnimeFixedTts,
   getJiangRule: () => shandongJiang.value,
+  getAllowChiRule: () => shandongAllowChi.value,
 })
 const remoteGame = useRemoteGame({
   playSound: playEffect,
@@ -854,6 +858,7 @@ function changeTableTheme(theme: TableThemeName) {
         v-model:selected-match="selectedMatch"
         v-model:selected-rule="selectedRule"
         v-model:shandong-jiang="shandongJiang"
+        v-model:shandong-allow-chi="shandongAllowChi"
         v-model:nickname-input="nicknameInput"
         v-model:join-code="joinCode"
         v-model:anime-character-id="animeCharacterId"

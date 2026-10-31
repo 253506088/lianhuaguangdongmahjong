@@ -7,24 +7,32 @@ const props = withDefaults(
     modelValue: RuleVariant
     allowBloodFlow?: boolean
     shandongJiang?: '258' | 'luan'
+    shandongAllowChi?: boolean
   }>(),
   {
     allowBloodFlow: false,
     shandongJiang: '258',
+    shandongAllowChi: true,
   },
 )
 
 const emit = defineEmits<{
   close: []
-  confirm: [value: RuleVariant, jiang?: '258' | 'luan']
+  confirm: [value: RuleVariant, jiang?: '258' | 'luan', allowChi?: boolean]
   viewRules: []
 }>()
 
 const pending = ref<RuleVariant>(props.modelValue)
 const pendingJiang = ref<'258' | 'luan'>(props.shandongJiang)
+const pendingAllowChi = ref<boolean>(props.shandongAllowChi)
 
 function handleConfirm() {
-  emit('confirm', pending.value, pending.value === 'shandong' ? pendingJiang.value : undefined)
+  emit(
+    'confirm',
+    pending.value,
+    pending.value === 'shandong' ? pendingJiang.value : undefined,
+    pending.value === 'shandong' ? pendingAllowChi.value : undefined,
+  )
 }
 </script>
 
@@ -47,23 +55,47 @@ function handleConfirm() {
           class="shandong-sub-options"
           @click.stop
         >
-          <span
-            class="sub-option-btn"
-            :class="{ active: pendingJiang === '258' }"
-            role="button"
-            tabindex="0"
-            @click="pendingJiang = '258'"
-          >
-            258掌将
+          <span class="sub-option-group">
+            <span class="sub-option-label">将牌</span>
+            <span
+              class="sub-option-btn"
+              :class="{ active: pendingJiang === '258' }"
+              role="button"
+              tabindex="0"
+              @click="pendingJiang = '258'"
+            >
+              258掌将
+            </span>
+            <span
+              class="sub-option-btn"
+              :class="{ active: pendingJiang === 'luan' }"
+              role="button"
+              tabindex="0"
+              @click="pendingJiang = 'luan'"
+            >
+              乱将
+            </span>
           </span>
-          <span
-            class="sub-option-btn"
-            :class="{ active: pendingJiang === 'luan' }"
-            role="button"
-            tabindex="0"
-            @click="pendingJiang = 'luan'"
-          >
-            乱将
+          <span class="sub-option-group">
+            <span class="sub-option-label">吃牌</span>
+            <span
+              class="sub-option-btn"
+              :class="{ active: pendingAllowChi }"
+              role="button"
+              tabindex="0"
+              @click="pendingAllowChi = true"
+            >
+              允许吃
+            </span>
+            <span
+              class="sub-option-btn"
+              :class="{ active: !pendingAllowChi }"
+              role="button"
+              tabindex="0"
+              @click="pendingAllowChi = false"
+            >
+              不可吃
+            </span>
           </span>
         </span>
       </span>
