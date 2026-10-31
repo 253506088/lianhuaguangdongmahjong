@@ -1,0 +1,5 @@
+/* Android 11's original WebView predates CSS aspect-ratio. */
+@supports not (aspect-ratio: 1) {
+  .mahjong-tile,
+  .game-app .hand-rack .mahjong-tile { height: calc(var(--tile-width) * 1.333333); }
+}

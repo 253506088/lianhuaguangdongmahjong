@@ -462,7 +462,9 @@ function isTileHintVisible(index: number) {
 }
 
 function beginTileGesture(index: number, event: PointerEvent) {
-  if (!['touch', 'pen'].includes(event.pointerType)) return
+  // Older Android WebViews can expose an unknown tool as pointerType=''
+  // (including accessibility/automation input). It still carries touch motion.
+  if (!['touch', 'pen'].includes(event.pointerType) && !(isAndroidApp && event.pointerType === '')) return
   touchStarts.set(event.pointerId, { index, x: event.clientX, y: event.clientY, startedAt: performance.now() })
   ;(event.currentTarget as HTMLElement)?.setPointerCapture?.(event.pointerId)
 }
@@ -740,7 +742,7 @@ function onAvatarError(entry: GamePlayer) {
           :data-score-direction="scoreDirectionFor(0)"
         >{{ scoreDeltaFor(0) > 0 ? '+' : '' }}{{ scoreDeltaFor(0) }}</strong>
       </Transition>
-      <div class="hand-rack" :class="{ playable: isUserTurn, dealing: phase === 'dealing', 'has-melds': user.melds.length }">
+      <div class="hand-rack" :class="{ playable: isUserTurn, dealing: phase === 'dealing', 'has-melds': user.melds.some(meld => meld.type !== 'flower') }">
         <div
           v-for="(tile, index) in displayedUserHand" :key="`${tile}-${index}`" class="hand-tile-slot"
           :class="{

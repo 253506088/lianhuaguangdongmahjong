@@ -4,6 +4,7 @@ import './platform/androidCompatibility'
 import { createApp } from 'vue'
 import App from './App.vue'
 import './style.css'
+import './platform/android.css'
 
 // Dismiss an open panel before Android offers to put the game in the background.
 // No Java object is exposed to JavaScript; native calls this narrow UI function.

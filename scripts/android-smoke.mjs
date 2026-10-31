@@ -68,13 +68,14 @@ try {
     await wait(600)
     const point = await until(() => evaluate(`(() => { const el = ${expression}; if (!el) return null; const r = el.getBoundingClientRect(); return r.width && r.height ? {x:r.x+r.width/2,y:r.y+r.height/2} : null })()`), 'touch target')
     const ratio = await evaluate('devicePixelRatio')
-    shell('shell', 'input', 'tap', String(Math.round(point.x * ratio)), String(Math.round(point.y * ratio)))
+    shell('shell', 'input', 'touchscreen', 'tap', String(Math.round(point.x * ratio)), String(Math.round(point.y * ratio)))
     await wait(450)
   }
   const button = text => `[...document.querySelectorAll('button')].find(b => b.innerText.includes(${JSON.stringify(text)}))`
   const screenshot = async name => {
-    const result = await send('Page.captureScreenshot', { format: 'png' })
-    await fs.writeFile(path.join(output, `${name}.png`), Buffer.from(result.data, 'base64'))
+    // Old WebViews omit composited WebGL layers from CDP screenshots.
+    const png = execFileSync(adb, ['-s', serial, 'exec-out', 'screencap', '-p'], { maxBuffer: 16 * 1024 * 1024 })
+    await fs.writeFile(path.join(output, `${name}.png`), png)
   }
   await send('Runtime.enable')
   await until(() => evaluate("document.querySelector('.start-button') !== null"), 'offline lobby')
@@ -87,13 +88,13 @@ try {
   await tap(button('确定'))
   await until(() => evaluate("!document.querySelector('.rule-picker-options') && document.querySelector('.start-button')?.innerText.includes('山东麻将')"), 'saved rule selection')
   await tap(button('开始东风场'))
-  await until(() => evaluate("document.querySelectorAll('.hand-tile-slot').length >= 13 && document.querySelector('.game-table-hud')?.dataset.tableReady === 'true'"), 'Shandong opening with offline assets', 90000)
+  await until(() => evaluate("document.querySelectorAll('.hand-tile-slot').length === 14 && document.querySelector('.game-table-hud')?.dataset.tableReady === 'true' && document.querySelector('.game-table-hud')?.dataset.openingStage === ''"), 'Shandong opening with offline assets', 90000)
   await wait(500)
   await screenshot('shandong-table')
   console.log('Shandong table and all assets loaded')
   const handBefore = await evaluate("document.querySelectorAll('.hand-tile-slot').length")
-  const swipe = await evaluate("(() => {const r=document.querySelector('.hand-tile-slot').getBoundingClientRect();return {x:Math.round((r.x+r.width/2)*devicePixelRatio),y:Math.round((r.y+r.height/2)*devicePixelRatio),endY:Math.round((r.y-70)*devicePixelRatio)}})()")
-  shell('shell', 'input', 'swipe', String(swipe.x), String(swipe.y), String(swipe.x), String(swipe.endY), '220')
+  const swipe = await evaluate("(() => {const r=document.querySelector('.hand-tile-slot .mahjong-tile').getBoundingClientRect();return {x:Math.round((r.x+r.width/2)*devicePixelRatio),y:Math.round((r.y+r.height/2)*devicePixelRatio),endY:Math.round((r.y-70)*devicePixelRatio)}})()")
+  shell('shell', 'input', 'touchscreen', 'swipe', String(swipe.x), String(swipe.y), String(swipe.x), String(swipe.endY), '220')
   await until(() => evaluate("document.querySelectorAll('.hand-tile-slot').length !== " + handBefore), 'touch discard')
   console.log('Touch swipe discarded a tile')
   const flower = await evaluate("document.querySelector('.flower-badge') !== null")
