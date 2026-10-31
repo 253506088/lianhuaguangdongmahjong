@@ -1,0 +1,90 @@
+[
+  {
+    "tile": "f1",
+    "name": "春",
+    "author": "Cangjie6",
+    "page": "https://commons.wikimedia.org/wiki/File:MJh1-.svg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/1/14/MJh1-.svg",
+    "originalSha256": "8b8db400f17a034a069512f0e431c51e1e13856ab84b317f8dabc3cf7aff3553",
+    "license": "CC-BY-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Removed oblique tile body and editor payload; retained outlined face artwork; cropped and normalized to 3:4."
+  },
+  {
+    "tile": "f2",
+    "name": "夏",
+    "author": "Cangjie6",
+    "page": "https://commons.wikimedia.org/wiki/File:MJh2-.svg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/e/e0/MJh2-.svg",
+    "originalSha256": "3f28d5fcf7388df35631cefa2683447024256ca110a2eca6189353cae7a2874c",
+    "license": "CC-BY-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Removed oblique tile body and editor payload; retained outlined face artwork; cropped and normalized to 3:4."
+  },
+  {
+    "tile": "f3",
+    "name": "秋",
+    "author": "Cangjie6",
+    "page": "https://commons.wikimedia.org/wiki/File:MJh3-.svg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/2/25/MJh3-.svg",
+    "originalSha256": "945af9b6fd4bdca352915950e65aaf8031f2700abb3df31203a767e21f821dc0",
+    "license": "CC-BY-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Removed oblique tile body and editor payload; retained outlined face artwork; cropped and normalized to 3:4."
+  },
+  {
+    "tile": "f4",
+    "name": "冬",
+    "author": "Cangjie6",
+    "page": "https://commons.wikimedia.org/wiki/File:MJh4-.svg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/b/b7/MJh4-.svg",
+    "originalSha256": "93789a31af2a5c9a4664fe97dfb01c4fd006e809c3ac9e764db3e725c4b31b07",
+    "license": "CC-BY-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Removed oblique tile body and editor payload; retained outlined face artwork; cropped and normalized to 3:4."
+  },
+  {
+    "tile": "f5",
+    "name": "梅",
+    "author": "Cangjie6",
+    "page": "https://commons.wikimedia.org/wiki/File:MJh5-.svg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/8/8b/MJh5-.svg",
+    "originalSha256": "6f4a48f2a9619a05e6b1b1ec1bb786330b886429a86873dd2359e0180a7d9ebe",
+    "license": "CC-BY-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Removed oblique tile body and editor payload; retained outlined face artwork; cropped and normalized to 3:4."
+  },
+  {
+    "tile": "f6",
+    "name": "兰",
+    "author": "Cangjie6",
+    "page": "https://commons.wikimedia.org/wiki/File:MJh6-.svg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/b/b3/MJh6-.svg",
+    "originalSha256": "12336977f2765e06f276a64652c02ee4fefd3599d25bd0adee8b07043d0e5ba6",
+    "license": "CC-BY-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Removed oblique tile body and editor payload; retained outlined face artwork; cropped and normalized to 3:4."
+  },
+  {
+    "tile": "f7",
+    "name": "竹",
+    "author": "Cangjie6",
+    "page": "https://commons.wikimedia.org/wiki/File:MJh8-.svg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/9/9c/MJh8-.svg",
+    "originalSha256": "520abc6ac10be661da5cc8b6694a41c9106785cb3f7aba8828fb50b232ef07de",
+    "license": "CC-BY-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Removed oblique tile body and editor payload; retained outlined face artwork; cropped and normalized to 3:4."
+  },
+  {
+    "tile": "f8",
+    "name": "菊",
+    "author": "Cangjie6",
+    "page": "https://commons.wikimedia.org/wiki/File:MJh7-.svg",
+    "original": "https://upload.wikimedia.org/wikipedia/commons/b/b6/MJh7-.svg",
+    "originalSha256": "2e12f313e425ceefe4ae51b49f09c58355eadb3537b719d0136ead6ca94f7864",
+    "license": "CC-BY-SA-4.0",
+    "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+    "changes": "Removed oblique tile body and editor payload; retained outlined face artwork; cropped and normalized to 3:4."
+  }
+]

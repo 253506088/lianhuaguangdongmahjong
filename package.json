@@ -15,9 +15,15 @@
     "test": "vitest run src",
     "test:e2e": "playwright test",
     "vibehub:solo": "node scripts/vibehub-solo-playwright.mjs",
-    "sync:vibehub": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-master-to-vibehub.ps1"
+    "sync:vibehub": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-master-to-vibehub.ps1",
+    "android:web": "npm run typecheck && vite build --config vite.android.config.ts",
+    "android:debug": "node scripts/build-android.mjs",
+    "android:release": "node scripts/build-android.mjs --release",
+    "android:bundle": "node scripts/build-android.mjs --release --bundle",
+    "assets:flowers": "node scripts/import-flower-assets.mjs"
   },
   "dependencies": {
+    "core-js": "^3.51.0",
     "three": "^0.185.1",
     "vue": "^3.5.40"
   },
@@ -29,5 +35,10 @@
     "vite": "^8.2.0",
     "vitest": "^4.1.10",
     "vue-tsc": "^3.3.9"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "core-js"
+    ]
   }
 }

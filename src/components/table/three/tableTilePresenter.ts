@@ -9,6 +9,7 @@ import type { TableActionEvent, TileType } from '../../../game/core/contracts/ty
 import type { TileInstanceRenderer } from './tileInstanceRenderer'
 import type { ResolvedTableProps, TableTransform } from './tableRenderTypes'
 import { bloodFlowWinPiles } from './bloodFlowWinPile'
+import { flowerTilePlacements } from './flowerTiles'
 import { prefersReducedMotion } from '../../../game/core/presentation/winEffect'
 import type { SourceTileEvent } from '../../../game/variants/lotus/bloodFlow/types'
 import type { BloodFlowCue } from '../../../game/variants/lotus/bloodFlow/presentation'
@@ -211,7 +212,9 @@ function addConcealedHand(playerIndex) {
 
 
 function discardTransform(playerIndex:number, index:number) {
-  return discardTileLayout(playerIndex,index)
+  // Flower racks reserve the inner corners; keep late discards out of them.
+  const hasFlowers = props.players.some(player => player.melds.some(meld => meld.type === 'flower'))
+  return discardTileLayout(playerIndex, index, hasFlowers ? 8 : 10)
 }
 
 // 出牌动画的起点 = 各家手牌位置（牌从手牌方向飞向牌河）。
@@ -615,6 +618,10 @@ function rebuildTableTiles({ reuseInstances = false }: { reuseInstances?: boolea
     addConcealedHand(playerIndex)
     addDiscards(playerIndex)
     addMelds(playerIndex)
+    for (const flower of flowerTilePlacements(playerIndex, props.players[playerIndex]?.melds ?? [])) {
+      addTableTile(new THREE.Vector3(flower.x, flower.y, flower.z),
+        new THREE.Quaternion().setFromEuler(new THREE.Euler(0, flower.rotation, 0)), flower.tile)
+    }
   }
   addWall()
   addHorses()

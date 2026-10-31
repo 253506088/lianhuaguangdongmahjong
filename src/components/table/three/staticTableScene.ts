@@ -1,6 +1,6 @@
 import * as THREE from 'three'
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js'
-import { TILE_TYPES } from '../../../game/core/rules/tiles'
+import { ALL_TILE_TYPES } from '../../../game/core/rules/tiles'
 import { windForSeat } from '../../../game/core/presentation/tableLayout'
 import type { TileType } from '../../../game/core/contracts/types'
 import { defaultTableTheme } from './tableTheme'
@@ -615,7 +615,7 @@ function makeGoldVerticalGlow() {
 
 // ---- 牌面纹理图集：全部牌面压进一张图，cap 合批从"每类型一个"压成 1 个 ----
 const ATLAS_COLS = 6
-const ATLAS_ROWS = 6
+const ATLAS_ROWS = Math.ceil(ALL_TILE_TYPES.length / ATLAS_COLS)
 const ATLAS_CELL_W = 96
 const ATLAS_CELL_H = 128
 const ATLAS_CELL_U = 1 / ATLAS_COLS
@@ -629,9 +629,9 @@ function getAtlasCapGeometry() {
   return atlasCapGeometry
 }
 
-// 返回某牌在 6×6 图集中的左下角 UV（canvas 顶行为 row 0，对应 UV 高值）。
+// 返回某牌在 6×7 图集中的左下角 UV（canvas 顶行为 row 0，对应 UV 高值）。
 function atlasCellUvFor(tile) {
-  const i = Math.max(0, TILE_TYPES.indexOf(tile))
+  const i = Math.max(0, ALL_TILE_TYPES.indexOf(tile))
   const col = i % ATLAS_COLS
   const row = Math.floor(i / ATLAS_COLS)
   return { u: col * ATLAS_CELL_U, v: 1 - (row + 1) * ATLAS_CELL_V }
@@ -643,7 +643,7 @@ function getAtlasMaterial() {
   canvas.width = ATLAS_COLS * ATLAS_CELL_W
   canvas.height = ATLAS_ROWS * ATLAS_CELL_H
   const ctx = canvas.getContext('2d')
-  TILE_TYPES.forEach((tile, i) => {
+  ALL_TILE_TYPES.forEach((tile, i) => {
     const col = i % ATLAS_COLS
     const row = Math.floor(i / ATLAS_COLS)
     drawTileFace(ctx, tile, col * ATLAS_CELL_W, row * ATLAS_CELL_H, ATLAS_CELL_W, ATLAS_CELL_H)
@@ -687,7 +687,7 @@ function makeAtlasMaterial(marker: 'joker' | 'wildcard' | 'laizi') {
   canvas.width = ATLAS_COLS * ATLAS_CELL_W
   canvas.height = ATLAS_ROWS * ATLAS_CELL_H
   const ctx = canvas.getContext('2d')
-  TILE_TYPES.forEach((tile, i) => {
+  ALL_TILE_TYPES.forEach((tile, i) => {
     const col = i % ATLAS_COLS
     const row = Math.floor(i / ATLAS_COLS)
     drawTileFace(ctx, tile, col * ATLAS_CELL_W, row * ATLAS_CELL_H, ATLAS_CELL_W, ATLAS_CELL_H, marker)

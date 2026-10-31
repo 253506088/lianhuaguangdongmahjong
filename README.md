@@ -1,5 +1,13 @@
 # 莲花广麻
 
+本 fork 新增 **Android 11+ 离线应用**与**八花独立 3D 展示区**。Android 版支持本地普通 AI 对战，当前 P2P 联机已知不可用，应用中不开放联机入口。
+
+- [Android 安装、构建、正式签名与验证](docs/android.md)
+- [如何向原项目提交 PR、如何同步上游更新](docs/fork-upstream.md)
+- [花牌素材来源及授权](assets-src/flowers/README.md)
+
+快速构建安装包：准备 Node.js 24、JDK 17、Android SDK 35 后，执行 `pnpm install --frozen-lockfile`、`pnpm android:debug`。APK 产物不提交 Git，可在本地构建目录或 GitHub Actions 的 Artifacts 获取。
+
 [![GitHub Stars](https://img.shields.io/github/stars/BestGuo2020/lianhuaguangdongmahjong?style=flat&logo=github)](https://github.com/BestGuo2020/lianhuaguangdongmahjong/stargazers)
 [![License](https://img.shields.io/github/license/BestGuo2020/lianhuaguangdongmahjong)](./LICENSE)
 ![Node.js](https://img.shields.io/badge/Node.js-%5E20.19.0%20%7C%7C%20%3E%3D22.12.0-339933?logo=nodedotjs&logoColor=white)
@@ -59,7 +67,7 @@
 | 构建工具 | Vite 8 |
 | 类型检查 | vue-tsc |
 | 测试 | Vitest（单元/契约测试）、Playwright（端到端测试） |
-| 包管理 | npm（仓库包含 `package-lock.json`） |
+| 包管理 | pnpm（仓库包含 `pnpm-lock.yaml`） |
 
 前端为单页应用，可独立运行单机模式；联机模式需要配套的后端房间服务（见「本地运行」）。`package.json` 已通过 `engines` 声明运行环境：Node.js `^20.19.0 || >=22.12.0`，npm `>=9.0.0`。
 
@@ -117,10 +125,10 @@ activeGamePort / GamePort
 克隆或下载项目后，在仓库根目录安装锁定版本的依赖：
 
 ```bash
-npm ci
+pnpm install --frozen-lockfile
 ```
 
-如果正在主动更新依赖，可使用 `npm install`；普通开发和 CI 环境优先使用 `npm ci`，以保持与 `package-lock.json` 一致。
+如果正在主动更新依赖，可使用 `pnpm install`；普通开发和 CI 环境优先使用 `pnpm install --frozen-lockfile`，以保持与 `pnpm-lock.yaml` 一致。
 
 ## 本地运行
 
@@ -281,9 +289,9 @@ npm run preview
 
 ## 常见问题
 
-### `npm ci` 提示 Node.js 版本不兼容
+### `pnpm install --frozen-lockfile` 提示 Node.js 版本不兼容
 
-请确认 `node --version` 满足 `^20.19.0 || >=22.12.0`，并确认 `npm --version` 不低于 `9.0.0`。Node.js 21、低于 22.12.0 的 Node.js 22，以及低于 20.19.0 的 Node.js 20 均不在当前约束范围内。升级运行环境后重新执行 `npm ci`。
+请确认 `node --version` 满足 `^20.19.0 || >=22.12.0`，并确认 `npm --version` 不低于 `9.0.0`。Node.js 21、低于 22.12.0 的 Node.js 22，以及低于 20.19.0 的 Node.js 20 均不在当前约束范围内。升级运行环境后重新执行 `pnpm install --frozen-lockfile`。
 
 ### `4173` 端口无法访问
 

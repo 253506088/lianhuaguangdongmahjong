@@ -30,7 +30,7 @@ function consumeCallbackResult(): string {
   return ''
 }
 
-export function useWakuDemoAuth() {
+export function useWakuDemoAuth(enabled = true) {
   const authenticated = ref(false)
   const account = ref<WakuDemoAccount | null>(null)
   const loading = ref(true)
@@ -72,6 +72,7 @@ export function useWakuDemoAuth() {
   }
 
   onMounted(() => {
+    if (!enabled) { loading.value = false; return }
     error.value = consumeCallbackResult()
     void refresh()
   })

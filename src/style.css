@@ -3862,3 +3862,6 @@ button { font: inherit; }
     transition: none !important;
   }
 }
+/* Native offline edition: concise status without a nonfunctional online entry. */
+.native-offline-note { margin: 0; color: var(--theme-text-muted); font-size: 12px; line-height: 1.5; text-align: center; }
+.has-three-scene .game-table-hud.has-flower-racks .seat-top { top: 1%; }

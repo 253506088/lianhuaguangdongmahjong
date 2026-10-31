@@ -19,7 +19,7 @@ export default defineConfig({
   use: {
     baseURL,
     // Use full Chromium headless with hardware GPU, not headless-shell SwiftShader.
-    channel: 'chromium',
+    channel: process.env.E2E_CHANNEL || 'chromium',
     launchOptions: { args: ['--enable-gpu'] },
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',

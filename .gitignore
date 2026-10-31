@@ -177,3 +177,24 @@ work/
 *.sln
 .DS_Store
 Thumbs.db
+
+# Android: generated web bundles, Gradle/IDE caches and device-specific SDK paths.
+# Keep native sources, build scripts and the Gradle wrapper under version control.
+/dist-android/
+/android/.gradle/
+/android/.kotlin/
+/android/local.properties
+/android/**/build/
+/android/captures/
+!/android/gradlew.bat
+.cxx/
+
+# Android install packages and private signing material: distribute via release
+# artifacts, never Git history. Never commit signing passwords or key stores.
+*.apk
+*.aab
+*.apks
+*.jks
+*.keystore
+keystore.properties
+signing.properties

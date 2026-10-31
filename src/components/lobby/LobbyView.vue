@@ -203,7 +203,7 @@ function toggleWakuDemoAuth() {
       />
 
       <section class="lobby-actions" aria-label="对局操作">
-        <div class="lobby-account-slot">
+        <div v-if="!singlePlayerOnly" class="lobby-account-slot">
           <div class="waku-account" :class="{ authenticated: wakuAuthenticated }">
             <div>
               <b>{{ wakuAuthenticated ? (wakuAccountName || 'WakuDemo 玩家') : 'WakuDemo 账号' }}</b>
@@ -218,7 +218,7 @@ function toggleWakuDemoAuth() {
           </div>
           <p v-if="wakuAuthError" class="waku-auth-error" role="alert">{{ wakuAuthError }}</p>
         </div>
-        <button v-if="storedSession && !roomId" class="continue-session" @click="$emit('resumeSession')">
+        <button v-if="!singlePlayerOnly && storedSession && !roomId" class="continue-session" @click="$emit('resumeSession')">
           ⏵ 继续对局<template v-if="storedSession.roomId">（房间 {{ storedSession.roomId }}）</template>
         </button>
         <div class="mode-selector" role="radiogroup" aria-label="游戏模式">
@@ -226,6 +226,7 @@ function toggleWakuDemoAuth() {
           <button v-if="!singlePlayerOnly" data-action-role="secondary" :class="{ active: gameMode === 'remote' }" role="radio" :aria-checked="gameMode === 'remote'" @click="$emit('update:gameMode', 'remote')"><b>联机对战</b><span>创建或加入房间</span></button>
         </div>
         <template v-if="gameMode === 'local'">
+          <p v-if="singlePlayerOnly" class="native-offline-note">离线单机版 · 无需登录。联机功能暂不可用。</p>
           <GameSettingsSummary
             :match-name="matchOption.name"
             :match-description="matchOption.description"
@@ -299,6 +300,7 @@ function toggleWakuDemoAuth() {
         </div>
 
         <div class="lobby-links">
+          <a v-if="singlePlayerOnly" class="repository-link" href="./licenses/index.html" data-action-role="light">开源许可</a>
           <button v-if="gameMode === 'remote'" class="text-button" data-action-role="light" @click="$emit('openStats')">我的战绩 →</button>
           <button class="text-button" data-action-role="light" data-testid="open-replay" @click="$emit('openReplay')">对局回放 →</button>
           <button class="text-button" data-action-role="light" @click="$emit('openRules')">游戏规则 →</button>

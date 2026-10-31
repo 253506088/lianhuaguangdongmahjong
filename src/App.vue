@@ -15,6 +15,7 @@ import { useLotusGame } from './game/variants/lotus/lotusGame'
 import { useBloodFlowGame } from './game/variants/lotus/bloodFlow/useBloodFlowGame'
 import { readShandongAllowChiPreference, saveShandongAllowChiPreference } from './game/core/rules/rulePreference'
 import { useShandongGame } from './game/variants/shandong/shandongGame'
+import { isAndroidApp } from './platform/nativeApp'
 import { readRuleVariantPreference, saveRuleVariantPreference, readShandongJiangPreference, saveShandongJiangPreference } from './game/core/rules/rulePreference'
 import { useBloodFlowRemoteGame } from './game/variants/lotus/bloodFlow/useBloodFlowRemoteGame'
 import { bloodFlowEnabled } from './game/variants/lotus/bloodFlow/availability'
@@ -337,7 +338,7 @@ const activeRemote = computed(() => (
 ))
 
 // 莲花麻将旧版翻精规则同时支持本地与联机对战。
-const singlePlayerOnly = computed(() => false)
+const singlePlayerOnly = computed(() => isAndroidApp)
 const usesLotusLocalEngine = computed(() => selectedRule.value === 'lotus-legacy')
 watch(() => activeRemote.value.rulesetId.value, (value) => {
   if (value === 'lotus-classic' || value === 'lotus-legacy' || value === 'lotus-blood-flow') selectedRule.value = value
@@ -498,13 +499,14 @@ watch(effectiveLlmEnabled, (enabled) => {
 const { roomMeta } = useRoomAvailability(gameMode, roomId)
 
 const disclaimerGate = useDisclaimerGate()
-const wakuAuth = useWakuDemoAuth()
+const wakuAuth = useWakuDemoAuth(!isAndroidApp)
 
 // 联机对战需登录：未登录时不跳转、不弹窗，只在大厅登录卡片处显示内联提示；
 // 玩家自行点卡片上的「登录」按钮后，登录成功自动进入联机模式。
 const pendingRemoteLogin = ref(false)
 
 function onGameModeChange(mode: GameMode) {
+  if (isAndroidApp && mode === 'remote') return
   if (mode === 'remote' && !wakuAuth.authenticated.value) {
     pendingRemoteLogin.value = true
     wakuAuth.error.value = '联机对战需要先登录 WakuDemo 账号'
