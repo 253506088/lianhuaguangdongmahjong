@@ -665,6 +665,8 @@ function onAvatarError(entry: GamePlayer) {
         class="gang-head-indicator"
         role="region"
         aria-label="公开杠头牌"
+        aria-live="polite"
+        aria-atomic="true"
         title="杠头：公开的杠牌，开杠后摸取此牌并翻开下一张"
       >
         <div class="gang-head-inner">
@@ -965,12 +967,11 @@ function onAvatarError(entry: GamePlayer) {
   font-weight: 800;
 }
 
-/* 山东麻将顶部中央杠头指示牌 */
+/* 杠头信息停靠左上角 HUD 空白区，给对家明搂的 3D 手牌让出顶部中央。 */
 .gang-head-indicator {
   position: absolute;
-  top: 48px;
-  left: 50%;
-  transform: translateX(-50%);
+  top: calc(var(--hud-top-edge, 48px) + 8px);
+  left: calc(var(--safe-left, 0px) + 16px);
   z-index: 35;
   pointer-events: auto;
   user-select: none;
@@ -979,24 +980,21 @@ function onAvatarError(entry: GamePlayer) {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 4px 14px 4px 10px;
-  border-radius: 99px;
-  background: linear-gradient(135deg, rgba(6, 40, 28, 0.94) 0%, rgba(15, 23, 42, 0.94) 100%);
-  border: 1.5px solid rgba(52, 211, 153, 0.85);
-  box-shadow: 0 4px 18px rgba(0, 0, 0, 0.55), 0 0 14px rgba(16, 185, 129, 0.35);
+  padding: 6px 12px 10px 10px;
+  border-radius: 12px;
+  background: var(--theme-panel-elevated, #18372e);
+  border: 1px solid var(--theme-border, #857850);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.3);
   backdrop-filter: blur(8px);
 }
 .gang-head-badge {
   display: flex;
   align-items: center;
-  padding: 3px 8px;
-  border-radius: 99px;
-  background: linear-gradient(135deg, #059669, #10b981);
-  color: #ffffff;
+  padding: 3px 0;
+  color: var(--theme-accent-text, #e5c579);
   font-size: 12px;
   font-weight: 800;
   letter-spacing: 1px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.35);
 }
 .gang-head-tile-wrap {
   display: flex;
@@ -1004,7 +1002,7 @@ function onAvatarError(entry: GamePlayer) {
 }
 .gang-head-tile-wrap :deep(.mahjong-tile),
 .gang-head-tile-wrap .mahjong-tile {
-  --tile-width: clamp(28px, 2.5vw, 36px);
+  --tile-width: 30px;
   filter: drop-shadow(0 2px 5px rgba(0, 0, 0, 0.5));
 }
 .gang-head-info {
@@ -1015,33 +1013,34 @@ function onAvatarError(entry: GamePlayer) {
 .gang-head-name {
   font-size: 14px;
   font-weight: 800;
-  color: #a7f3d0;
+  color: var(--theme-text, #fff);
   line-height: 1.2;
 }
 .gang-head-sub {
   font-size: 10px;
-  color: #94a3b8;
+  color: var(--theme-text-muted, #b8c5bf);
   line-height: 1.2;
 }
 .gang-head-cue-enter-active,
 .gang-head-cue-leave-active {
-  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: opacity .2s ease, transform .2s ease;
 }
 .gang-head-cue-enter-from,
 .gang-head-cue-leave-to {
   opacity: 0;
-  transform: translate(-50%, -10px) scale(0.95);
+  transform: translateY(-6px);
 }
 @container (max-width: 768px) or (max-height: 520px) {
   .gang-head-indicator {
-    top: 36px;
+    top: calc(var(--safe-top, 0px) + 38px);
+    left: calc(var(--safe-left, 0px) + 10px);
   }
   .gang-head-inner {
-    padding: 2px 10px 2px 6px;
+    padding: 3px 8px 8px;
     gap: 6px;
   }
   .gang-head-badge {
-    padding: 2px 6px;
+    padding: 2px 0;
     font-size: 11px;
   }
   .gang-head-tile-wrap :deep(.mahjong-tile),
@@ -1051,6 +1050,16 @@ function onAvatarError(entry: GamePlayer) {
   .gang-head-sub {
     display: none;
   }
+}
+@container (max-height: 360px) {
+  /* 很矮的横屏并入底分旁的顶栏空位，避开左家头像与花牌按钮。 */
+  .gang-head-indicator {
+    top: calc(var(--safe-top, 0px) + 4px);
+    left: calc(var(--safe-left, 0px) + 80px);
+  }
+  .gang-head-inner { gap: 5px; padding: 2px 7px 6px; }
+  .gang-head-tile-wrap :deep(.mahjong-tile) { --tile-width: 20px; }
+  .gang-head-name { font-size: 12px; }
 }
 .baoting-btn {
   background: linear-gradient(135deg, #059669, #10b981) !important;
