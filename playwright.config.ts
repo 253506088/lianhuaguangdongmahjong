@@ -16,7 +16,7 @@ export default defineConfig({
   use: {
     baseURL,
     // User-requested hardware GPU headless verification; retain P2P background timing flags.
-    channel: 'chromium',
+    channel: process.env.E2E_CHANNEL || 'chromium',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
     viewport: { width: 1280, height: 720 },

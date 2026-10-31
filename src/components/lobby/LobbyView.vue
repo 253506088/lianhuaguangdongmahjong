@@ -23,6 +23,7 @@ interface Props {
   selectedMatch: MatchType
   selectedRule: RuleVariant
   shandongJiang?: '258' | 'luan'
+  shandongAllowChi?: boolean
   matchName: string
   roomId: string
   nicknameInput: string
@@ -52,6 +53,7 @@ const emit = defineEmits<{
   'update:selectedMatch': [value: MatchType]
   'update:selectedRule': [value: RuleVariant]
   'update:shandongJiang': [value: '258' | 'luan']
+  'update:shandongAllowChi': [value: boolean]
   'update:nicknameInput': [value: string]
   'update:joinCode': [value: string]
   'update:animeCharacterId': [value: CharacterId]
@@ -81,14 +83,16 @@ const ruleOption = computed(() => getRuleVariant(props.selectedRule))
 const ruleDescription = computed(() => {
   if (props.selectedRule === 'shandong') {
     const jiang = props.shandongJiang === 'luan' ? '乱将' : '258掌将'
-    return `${jiang} · 144张牌（含花） · 明搂`
+    const chi = props.shandongAllowChi === false ? '不可吃' : '可吃'
+    return `${jiang} · ${chi} · 144张牌（含花） · 明搂`
   }
   return ruleOption.value.highlights.slice(0, 2).join(' · ')
 })
 const startButtonRuleText = computed(() => {
   if (props.selectedRule === 'shandong') {
     const jiang = props.shandongJiang === 'luan' ? '乱将' : '258掌将'
-    return `${ruleOption.value.name}（${jiang}）`
+    const chi = props.shandongAllowChi === false ? '不可吃' : '可吃'
+    return `${ruleOption.value.name}（${jiang}·${chi}）`
   }
   return ruleOption.value.name
 })
@@ -115,10 +119,13 @@ function selectMatch(value: MatchType) {
   closePicker()
 }
 
-function selectRule(value: RuleVariant, jiang?: '258' | 'luan') {
+function selectRule(value: RuleVariant, jiang?: '258' | 'luan', allowChi?: boolean) {
   emit('update:selectedRule', value)
   if (jiang) {
     emit('update:shandongJiang', jiang)
+  }
+  if (allowChi !== undefined) {
+    emit('update:shandongAllowChi', allowChi)
   }
   closePicker()
 }
@@ -163,6 +170,7 @@ function closeDialog() {
           <button v-if="!singlePlayerOnly" data-action-role="secondary" :class="{ active: gameMode === 'remote' }" role="radio" :aria-checked="gameMode === 'remote'" @click="$emit('update:gameMode', 'remote')"><b>联机对战</b><span>创建或加入房间</span></button>
         </div>
         <template v-if="gameMode === 'local'">
+          <p v-if="singlePlayerOnly" class="native-offline-note">离线单机版 · 无需登录。联机功能暂不可用。</p>
           <GameSettingsSummary
             :match-name="matchOption.name"
             :match-description="matchOption.description"
@@ -232,6 +240,7 @@ function closeDialog() {
         </div>
 
         <div class="lobby-links">
+          <a v-if="singlePlayerOnly" class="repository-link" href="./licenses/index.html" data-action-role="light">开源许可</a>
           <button v-if="gameMode === 'remote' && !loginRequired" class="text-button" data-action-role="light" @click="$emit('openStats')">我的战绩 →</button>
           <button class="text-button" data-action-role="light" data-testid="open-replay" @click="$emit('openReplay')">对局回放 →</button>
           <button class="text-button" data-action-role="light" @click="$emit('openRules')">游戏规则 →</button>
@@ -289,6 +298,7 @@ function closeDialog() {
         v-else
         :model-value="selectedRule"
         :shandong-jiang="shandongJiang"
+        :shandong-allow-chi="shandongAllowChi"
         :allow-blood-flow="bloodFlowEnabled(gameMode === 'local' ? 'local' : 'p2p')"
         @close="closePicker"
         @confirm="selectRule"

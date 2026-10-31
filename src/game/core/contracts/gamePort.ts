@@ -128,7 +128,7 @@ export interface WaitInfo {
 
 export interface GameCapabilities {
   bloodFlow?: BloodFlowTableState | null
-  chi?: { choose(optionIndex: number): void }
+  chi?: { available?: boolean; choose(optionIndex: number): void }
   windKong?: { available: boolean; execute(): void }
   mingLou?: { available: boolean; execute(): void }
   baoTing?: { available: boolean; execute(): void }

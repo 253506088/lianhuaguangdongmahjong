@@ -16,11 +16,17 @@
     "test:e2e": "playwright test",
     "vibehub:solo": "node scripts/vibehub-solo-playwright.mjs",
     "deploy:vibehub": "npm run build && powershell -NoProfile -ExecutionPolicy Bypass -Command \"& (Join-Path $env:LOCALAPPDATA 'VibeHub\\bin\\vibehub-windows-x64.exe') update --slug B5AJupT1 --dir dist --note-file tmp\\vibehub-update-note.txt\"",
-    "sync:vibehub": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-master-to-vibehub.ps1"
+    "sync:vibehub": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/sync-master-to-vibehub.ps1",
+    "android:web": "npm run typecheck && vite build --config vite.android.config.ts",
+    "android:debug": "node scripts/build-android.mjs",
+    "android:release": "node scripts/build-android.mjs --release",
+    "android:bundle": "node scripts/build-android.mjs --release --bundle",
+    "assets:flowers": "node scripts/import-flower-assets.mjs"
   },
   "dependencies": {
     "three": "^0.185.1",
-    "vue": "^3.5.40"
+    "vue": "^3.5.40",
+    "core-js": "^3.51.0"
   },
   "devDependencies": {
     "@playwright/test": "^1.62.1",
@@ -30,5 +36,10 @@
     "vite": "^8.2.0",
     "vitest": "^4.1.10",
     "vue-tsc": "^3.3.9"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": [
+      "core-js"
+    ]
   }
 }

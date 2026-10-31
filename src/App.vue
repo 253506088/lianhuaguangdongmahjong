@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { isAndroidApp } from './platform/nativeApp'
 import { computed, defineAsyncComponent, onMounted, ref, shallowRef, watch } from 'vue'
 import StatsOverlay from './components/account/StatsOverlay.vue'
 import WinEffectLab from './components/dev/WinEffectLab.vue'
@@ -36,6 +37,8 @@ import {
   saveRuleVariantPreference,
   readShandongJiangPreference,
   saveShandongJiangPreference,
+  readShandongAllowChiPreference,
+  saveShandongAllowChiPreference,
 } from './game/core/rules/rulePreference'
 import { useReplayRecorder } from './game/replay/useReplayRecorder'
 import { createAnalysisStorage } from './game/replay/analysis/storage'
@@ -62,9 +65,13 @@ const resultVisible = ref(true)
 const selectedMatch = ref<MatchType>('east')
 const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)
 const shandongJiang = ref<'258' | 'luan'>(readShandongJiangPreference())
+const shandongAllowChi = ref<boolean>(readShandongAllowChiPreference())
 
 watch(selectedRule, (rule) => {
   saveRuleVariantPreference(rule)
+})
+watch(shandongAllowChi, (allowChi) => {
+  saveShandongAllowChiPreference(allowChi)
 })
 watch(shandongJiang, (jiang) => {
   saveShandongJiangPreference(jiang)
@@ -262,6 +269,7 @@ const shandongGame = useShandongGame({
   getTableThemeName: () => tableThemeName.value,
   animeFixedTts: localAnimeFixedTts,
   getJiangRule: () => shandongJiang.value,
+  getAllowChiRule: () => shandongAllowChi.value,
 })
 /**
  * 联机（P2P）分析记录开场（§6）：血流房间在拿到**本场分析区场次 id** 时调这里。
@@ -307,7 +315,7 @@ const vibeRemoteGame = useVibeRemoteGame({
 })
 
 // 莲花麻将旧版翻精规则同时支持本地与联机对战。
-const singlePlayerOnly = computed(() => false)
+const singlePlayerOnly = computed(() => isAndroidApp)
 const usesLotusLocalEngine = computed(() => selectedRule.value === 'lotus-legacy')
 watch(() => vibeRemoteGame.rulesetId.value, (value) => {
   if (value === 'lotus-classic' || value === 'lotus-legacy' || value === 'lotus-blood-flow') selectedRule.value = value
@@ -711,6 +719,7 @@ const themeLockReason = computed(() => (
           v-model:selected-match="selectedMatch"
           v-model:selected-rule="selectedRule"
           v-model:shandong-jiang="shandongJiang"
+          v-model:shandong-allow-chi="shandongAllowChi"
           v-model:nickname-input="nicknameInput"
           v-model:join-code="joinCode"
           v-model:anime-character-id="animeCharacterId"
