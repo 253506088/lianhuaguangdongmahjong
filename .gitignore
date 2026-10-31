@@ -198,3 +198,7 @@ Thumbs.db
 *.keystore
 keystore.properties
 signing.properties
+
+# Local Android delivery copies, checksums and build provenance. Source and
+# release instructions live in android/ and docs/; distribute binaries separately.
+/artifacts/android/

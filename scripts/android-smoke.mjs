@@ -1,6 +1,7 @@
 // Real APK/WebView smoke test. Use a disposable Android emulator, never a
 // personal device: this test reinstalls the debug APK and clears its app data.
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 
@@ -10,6 +11,7 @@ const sdk = process.env.ANDROID_HOME || process.env.ANDROID_SDK_ROOT
 if (!sdk) throw new Error('Set ANDROID_HOME')
 const adb = path.join(sdk, 'platform-tools', process.platform === 'win32' ? 'adb.exe' : 'adb')
 const appId = 'io.github.mahjong253506088.app.debug'
+const apkPath = 'android/app/build/outputs/apk/debug/app-debug.apk'
 const activity = `${appId}/io.github.mahjong253506088.app.MainActivity`
 const output = process.env.ANDROID_EVIDENCE_DIR || 'tmp/android-smoke'
 await fs.mkdir(output, { recursive: true })
@@ -20,7 +22,7 @@ async function until(check, description, timeout = 45000) {
   while (Date.now() - started < timeout) { const value = await check(); if (value) return value; await wait(250) }
   throw new Error(`Timed out: ${description}`)
 }
-shell('install', '-r', 'android/app/build/outputs/apk/debug/app-debug.apk')
+shell('install', '-r', apkPath)
 shell('shell', 'pm', 'clear', appId)
 // Dismiss the emulator's first-use system tutorial, which otherwise intercepts
 // game taps and the first Back key outside the WebView.
@@ -74,6 +76,10 @@ try {
   const button = text => `[...document.querySelectorAll('button')].find(b => b.innerText.includes(${JSON.stringify(text)}))`
   const screenshot = async name => {
     // Old WebViews omit composited WebGL layers from CDP screenshots.
+    // DOM assertions can finish before Android presents the new frame. Wait
+    // for paint and the native compositor so evidence shows the asserted UI.
+    await evaluate('new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)))')
+    await wait(1000)
     const png = execFileSync(adb, ['-s', serial, 'exec-out', 'screencap', '-p'], { maxBuffer: 16 * 1024 * 1024 })
     await fs.writeFile(path.join(output, `${name}.png`), png)
   }
@@ -89,7 +95,7 @@ try {
   await until(() => evaluate("!document.querySelector('.rule-picker-options') && document.querySelector('.start-button')?.innerText.includes('山东麻将')"), 'saved rule selection')
   await tap(button('开始东风场'))
   await until(() => evaluate("document.querySelectorAll('.hand-tile-slot').length === 14 && document.querySelector('.game-table-hud')?.dataset.tableReady === 'true' && document.querySelector('.game-table-hud')?.dataset.openingStage === ''"), 'Shandong opening with offline assets', 90000)
-  await wait(500)
+  await until(() => evaluate("!document.querySelector('.table-loading, .opening-overlay')"), 'opening transitions finished')
   await screenshot('shandong-table')
   console.log('Shandong table and all assets loaded')
   const handBefore = await evaluate("document.querySelectorAll('.hand-tile-slot').length")
@@ -114,7 +120,11 @@ try {
   await wait(500)
   if (!await evaluate('window.__nativeSmokeToken === 253506088')) throw new Error('Background/resume recreated the game')
   if (errors.length) throw new Error(errors.join('\n'))
-  const report = { android: shell('shell','getprop','ro.build.version.release'), api: shell('shell','getprop','ro.build.version.sdk'),
+  const report = { capturedAt: new Date().toISOString(),
+    sourceCommit: execFileSync('git', ['rev-parse', 'HEAD'], { encoding: 'utf8' }).trim(),
+    sourceDirty: Boolean(execFileSync('git', ['status', '--porcelain', '--untracked-files=no'], { encoding: 'utf8' }).trim()),
+    apkSha256: createHash('sha256').update(await fs.readFile(apkPath)).digest('hex'),
+    android: shell('shell','getprop','ro.build.version.release'), api: shell('shell','getprop','ro.build.version.sdk'),
     webview: shell('shell','dumpsys','webviewupdate').split('\n').find(line => line.includes('Current WebView package'))?.trim(),
     offline: true, landscape: true, shandongOpening: true, touchDiscard: true, flowerDetail: flower, backgroundResume: true, errors }
   await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2) + '\n')

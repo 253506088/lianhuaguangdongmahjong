@@ -42,7 +42,7 @@ header button { border: 0; border-radius: 50%; background: #ffffff12; color: inh
 .flower-detail-tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px 8px; }
 figure { margin: 0; text-align: center; }
 figure :deep(.mahjong-tile) { width: 52px; height: 70px; margin: auto; }
-figcaption { font-size: 14px; padding-top: 8px; }
+figcaption { font-size: 14px; padding-top: 16px; }
 p { margin: 18px 0 0; font-size: 12px; line-height: 1.6; }
-@media (max-height: 440px) { .flower-detail { padding: 14px 20px; } header { margin-bottom: 10px; } figure :deep(.mahjong-tile) { width: 40px; height: 54px; } figcaption { padding-top: 4px; } p { margin-top: 10px; } }
+@media (max-height: 440px) { .flower-detail { padding: 14px 20px; } header { margin-bottom: 10px; } figure :deep(.mahjong-tile) { width: 40px; height: 54px; } figcaption { padding-top: 12px; } p { margin-top: 10px; } }
 </style>

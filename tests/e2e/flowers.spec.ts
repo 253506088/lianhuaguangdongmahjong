@@ -13,6 +13,21 @@ for (const [name, width, height] of [['desktop', 1280, 720], ['phone', 915, 412]
     await expect.poll(() => page.evaluate(() => document.querySelector('canvas')?.width ?? 0)).toBeGreaterThan(0)
     // The renderer exposes its frame count only for browser verification.
     await expect.poll(() => page.evaluate(() => (window as any).__tableRenderedFrames?.() ?? 0)).toBeGreaterThan(0)
+    // Include the real header: its transparent box used to intercept the far
+    // player's badge, which was also partly outside a short landscape screen.
+    for (const badge of await page.locator('.flower-badge').all()) {
+      const rect = await badge.boundingBox()
+      expect(rect).not.toBeNull()
+      expect(rect!.y).toBeGreaterThanOrEqual(0)
+      expect(rect!.y + rect!.height).toBeLessThanOrEqual(height)
+      await badge.click()
+      await expect(page.locator('.flower-detail')).toBeVisible()
+      await expect(page.locator('.flower-detail figcaption')).toHaveCount(2)
+      await page.getByRole('button', { name: '关闭花牌' }).click()
+    }
+    await page.getByRole('button', { name: '切换牌桌主题' }).click()
+    await expect(page.getByRole('menu', { name: '牌桌主题' })).toBeVisible()
+    await page.keyboard.press('Escape')
     await page.screenshot({ path: testInfo.outputPath(`flowers-${name}.png`) })
     await page.locator('.user-identity .flower-badge').click()
     await expect(page.getByRole('dialog', { name: '本家的花牌' })).toBeVisible()
