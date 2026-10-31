@@ -45,6 +45,7 @@ jobs:
           arch: x86_64
           profile: pixel_2
           disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -no-snapshot -feature GLESDynamicVersion -prop qemu.opengles.version=196608
           script: ANDROID_SERIAL=emulator-5554 node scripts/android-smoke.mjs
       - uses: actions/upload-artifact@v4
         if: always()

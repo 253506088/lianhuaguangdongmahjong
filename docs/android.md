@@ -36,9 +36,13 @@ ANDROID_KEY_PASSWORD
 
 运行 `pnpm android:release` 生成签名 APK；`pnpm android:bundle` 生成商店使用的 AAB。脚本在缺少证书时明确失败，不会把 debug 签名冒充正式发布。请保管证书，后续升级必须沿用同一个证书，同时递增 `android/app/build.gradle` 的 `versionCode`。
 
+本地也支持被 Git 忽略的 `android/signing.properties`，使用 `storeFile`、`storePassword`、`keyAlias`、`keyPassword` 四个属性（`storeFile` 相对 `android/`）。环境变量优先。签名证书和此配置应一同备份，不能放到公开仓库。
+
 SDK 路径、Gradle 缓存、APK/AAB、签名文件、密码配置均在 `.gitignore` 中说明并排除。原生源码、wrapper JAR、资源 SVG、锁文件和 CI 必须提交。
 
 ## 验证
+
+本次 Android 11（WebView 83）和 Android 16（WebView 133）的实际 APK 验收均通过，详情见 [验证记录](verification-android-flowers.md)。
 
 ```sh
 pnpm test --maxWorkers=2
@@ -51,6 +55,8 @@ ANDROID_SERIAL=emulator-5554 node scripts/android-smoke.mjs
 Windows 在上一行命令前用 `$env:ANDROID_SERIAL='emulator-5554'` 设置变量。脚本会重装并清空调试应用、断开模拟器 Wi-Fi/移动数据、验证横屏大厅、山东麻将开局、触屏出牌、花牌查看和返回键、后台恢复，并恢复网络设置。截图和 JSON 报告保存在被忽略的 `tmp/android-smoke`。
 
 [Android APK workflow](../.github/workflows/android.yml) 在 API 30 / 35 模拟器上执行同一流程，上传安装包与取证文件，可从 GitHub Actions 的 Artifacts 下载。CI 的结果以实际运行状态为准。
+
+API 30 模拟器需要启用 ES 3：确认 `adb shell getprop ro.opengles.version` 至少为 `196608`。部分旧镜像即使 GPU 支持 ES 3 仍默认报告 ES 2，可用 `-feature GLESDynamicVersion -prop qemu.opengles.version=196608` 启动；Windows Intel GPU 可使用 `-gpu angle_indirect`。测试截图从原生屏幕获取，因为旧 WebView 的 CDP 截图会遗漏 WebGL 图层。
 
 ## 素材和许可
 

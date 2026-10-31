@@ -1,8 +1,19 @@
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { existsSync, readFileSync } from 'node:fs'
+import path from 'node:path'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const release = process.argv.includes('--release')
 const bundle = process.argv.includes('--bundle')
+const signingFile = path.join(root, 'android', 'signing.properties')
+if (release && existsSync(signingFile)) {
+  const local = Object.fromEntries(readFileSync(signingFile, 'utf8').split(/\r?\n/)
+    .filter(line => line && !line.startsWith('#') && line.includes('='))
+    .map(line => [line.slice(0, line.indexOf('=')).trim(), line.slice(line.indexOf('=') + 1).trim()]))
+  for (const [envKey, key] of Object.entries({ ANDROID_KEYSTORE_PATH: 'storeFile', ANDROID_KEYSTORE_PASSWORD: 'storePassword', ANDROID_KEY_ALIAS: 'keyAlias', ANDROID_KEY_PASSWORD: 'keyPassword' })) {
+    if (!process.env[envKey] && local[key]) process.env[envKey] = key === 'storeFile' ? path.resolve(root, 'android', local[key]) : local[key]
+  }
+}
 if (release && !['ANDROID_KEYSTORE_PATH', 'ANDROID_KEYSTORE_PASSWORD', 'ANDROID_KEY_ALIAS', 'ANDROID_KEY_PASSWORD'].every(key => process.env[key])) {
   throw new Error('Signed release requires ANDROID_KEYSTORE_PATH, ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS and ANDROID_KEY_PASSWORD. See docs/android.md.')
 }
