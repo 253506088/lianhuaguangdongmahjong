@@ -40,6 +40,8 @@ ANDROID_KEY_PASSWORD
 
 SDK 路径、Gradle 缓存、APK/AAB、签名文件、密码配置均在 `.gitignore` 中说明并排除。原生源码、wrapper JAR、资源 SVG、锁文件和 CI 必须提交。
 
+本地交付副本位于 `artifacts/android/mahjong-1.1.0.apk`，同目录的 `SHA256SUMS.txt` 与 `build-info.json` 用于核对文件和源码提交。该目录为生成产物，不提交 Git。将 APK 传到手机后打开，按系统提示允许文件管理器安装应用即可；无需运行本机开发服务器。正式版与 debug 版包名不同，可同时安装。
+
 ## 验证
 
 本次 Android 11（WebView 83）和 Android 16（WebView 133）的实际 APK 验收均通过，详情见 [验证记录](verification-android-flowers.md)。

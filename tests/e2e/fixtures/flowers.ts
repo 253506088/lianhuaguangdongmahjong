@@ -1,11 +1,13 @@
 import { createApp, h, reactive } from 'vue'
 import '../../../src/style.css'
 import GameTableHud from '../../../src/components/table/GameTableHud.vue'
+import GameShellHeader from '../../../src/components/shell/GameShellHeader.vue'
 import { FLOWER_TILES } from '../../../src/game/core/rules/tiles'
 import type { GamePlayer, Meld, TileType } from '../../../src/game/core/contracts/types'
 import { defaultAvatarForSeat } from '../../../src/game/core/presentation/avatar'
 import { themePresentationByName, themePresentationCssVariables } from '../../../src/theme/themePresentation'
 import { isTableThemeName } from '../../../src/theme/themeIdentity'
+import { useAudio } from '../../../src/game/core/presentation/useAudio'
 
 const query = new URLSearchParams(location.search)
 const requestedTheme = query.get('theme')
@@ -36,6 +38,10 @@ Object.assign(window, { flowerFixture: {
   reset: () => players.forEach(p => { p.melds = p.melds.filter(m => m.type !== 'flower') }),
   draw: (seat: number, tile: TileType) => players[seat].melds.push({ type: 'flower', tile, tiles: [tile] }),
 } })
-createApp({ render: () => h('main', { class: 'game-app', 'data-table-theme': theme,
+createApp({ setup() { useAudio(); }, render: () => h('main', { class: 'game-app', 'data-table-theme': theme,
   style: themePresentationCssVariables(themePresentationByName(theme)) },
-  [h('div', { class: 'has-three-scene' }, [h(GameTableHud, props)])]) }).mount('#app')
+  [h('div', { class: 'has-three-scene' }, [
+    h(GameShellHeader, { gameMode: 'local', phase: 'playing', hasPlayers: true,
+      matchName: '东风场', roundLabel: '东一局', honba: 0, roomId: '', signalQuality: 3, themeName: theme }),
+    h(GameTableHud, props),
+  ])]) }).mount('#app')
