@@ -1,6 +1,6 @@
 import { spawnSync } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
-import { existsSync, readFileSync } from 'node:fs'
+import { existsSync, readFileSync, lstatSync, realpathSync, rmSync } from 'node:fs'
 import path from 'node:path'
 const root = fileURLToPath(new URL('..', import.meta.url))
 const release = process.argv.includes('--release')
@@ -24,5 +24,15 @@ function run(command, args, cwd = root) {
   if (result.status !== 0) process.exit(result.status ?? 1)
 }
 run('node', ['node_modules/vue-tsc/bin/vue-tsc.js', '--noEmit'])
+// A native package must contain only the current build. Validate the absolute
+// generated directory before removing it; never follow an output symlink.
+const output = path.resolve(root, 'dist-android')
+if (existsSync(output)) {
+  const expected = path.join(realpathSync(root), 'dist-android')
+  if (lstatSync(output).isSymbolicLink() || !lstatSync(output).isDirectory() || realpathSync(output) !== expected) {
+    throw new Error('Refusing to clean an Android output outside the repository')
+  }
+  rmSync(output, { recursive: true, force: true })
+}
 run('node', ['node_modules/vite/bin/vite.js', 'build', '--config', 'vite.android.config.ts'])
 run(process.platform === 'win32' ? 'gradlew.bat' : './gradlew', [bundle ? 'bundleRelease' : release ? 'assembleRelease' : 'assembleDebug', '--console=plain'], fileURLToPath(new URL('../android', import.meta.url)))
