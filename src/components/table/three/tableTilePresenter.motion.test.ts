@@ -46,6 +46,23 @@ function setup(meld?: Meld, action?: TableActionType) {
 
 afterEach(() => vi.restoreAllMocks())
 
+describe('flower instances', () => {
+  it.each([0, 1, 2, 3])('renders flowers face-up for seat %i alongside normal melds', seat => {
+    const s = setup()
+    s.props.players[seat].melds = [
+      { type: 'flower', tile: 'f1', tiles: ['f1'] },
+      { type: 'peng', tile: 'm5', tiles: ['m5','m5','m5'], from: (seat + 1) % 4 },
+      { type: 'flower', tile: 'f8', tiles: ['f8'] },
+    ]
+    s.presenter.rebuild()
+    expect(s.rendered.filter(p => p.face === 'f1' || p.face === 'f8').map(p => p.face)).toEqual(['f1','f8'])
+    expect(s.rendered.filter(p => p.face === 'm5')).toHaveLength(3)
+    s.props.players[seat].melds = []
+    s.presenter.rebuild()
+    expect(s.rendered).toHaveLength(0)
+  })
+})
+
 describe('shared normal tile animations survive state refreshes', () => {
   it('does not carry an unfinished discard into a restored blood-flow view', () => {
     const s = setup()

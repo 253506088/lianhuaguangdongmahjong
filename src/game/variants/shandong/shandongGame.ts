@@ -47,6 +47,7 @@ interface UseShandongGameOptions {
   ruleset?: RuleSet
   animeFixedTts?: AnimeFixedTtsExecutor
   getJiangRule?: () => '258' | 'luan'
+  getAllowChiRule?: () => boolean
 }
 
 export function useShandongGame({
@@ -62,6 +63,7 @@ export function useShandongGame({
   ruleset = SHANDONG_RULESET,
   animeFixedTts,
   getJiangRule = () => '258',
+  getAllowChiRule = () => true,
 }: UseShandongGameOptions = {}) {
   const sound = headless ? () => {} : playSound
   const soundAndWait = headless ? async () => {} : playSoundAndWait
@@ -100,6 +102,7 @@ export function useShandongGame({
 
   const state = createShandongGameState()
   state.luanJiang.value = getJiangRule() === 'luan'
+  state.allowChi.value = getAllowChiRule() !== false
   const selectors = createShandongSelectors(state, ruleset)
 
   let openingTimeline!: ReturnType<typeof createShandongOpening>
@@ -322,13 +325,18 @@ export function useShandongGame({
 
   function startGame(mode?: MatchType, options: GameStartOptions = {}) {
     state.luanJiang.value = getJiangRule() === 'luan'
+    state.allowChi.value = getAllowChiRule() !== false
     controllers.forEach((c) => c.reset())
     return openingTimeline.start(mode, options)
   }
 
   const capabilities = computed<GameCapabilities>(() => ({
     chi: {
+      get available() {
+        return state.allowChi.value
+      },
       choose(optionIndex: number) {
+        if (!state.allowChi.value) return
         playerActions.chooseChi(optionIndex)
       },
     },

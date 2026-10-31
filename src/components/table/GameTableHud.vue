@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import FlowerCollection from './FlowerCollection.vue'
+import { isAndroidApp } from '../../platform/nativeApp'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import MahjongTile from '../MahjongTile.vue'
 import PlayerSeat from '../PlayerSeat.vue'
@@ -337,7 +339,7 @@ const hoveredWaits = computed(() => hoveredDiscard.value
   ? props.userTingOptions.find((option) => option.discard === hoveredDiscard.value) ?? null
   : null)
 const activeWaits = computed(() => hoveredWaits.value || props.userDiscardWaits
-  || (props.selectedIndex < 0 && (props.bloodFlow || !props.isUserTurn) ? props.userCurrentWaits : null))
+  || (props.selectedIndex < 0 && (props.bloodFlow || !props.isUserTurn || (props.rulesetId === 'shandong' && (props.user?.isBaoTing || props.user?.isMingLou))) ? props.userCurrentWaits : null))
 const bloodFlowWaitTiles = computed(() => (activeWaits.value?.tiles ?? []).map(item => {
   const scores = activeWaits.value?.discard ? props.bloodFlow?.discardWaitScores?.[activeWaits.value.discard] : props.bloodFlow?.waits
   const score = scores?.find(wait => wait.tile === item.tile)
@@ -550,9 +552,10 @@ function onAvatarError(entry: GamePlayer) {
   <div
     ref="tableHudElement"
     class="game-table-hud"
-    :class="{ 'blood-flow-table': Boolean(bloodFlow) }"
+    :class="{ 'blood-flow-table': Boolean(bloodFlow), 'has-flower-racks': players.some(player => player.melds.some(meld => meld.type === 'flower')) }"
     :data-table-theme="themeName"
     :data-phase="phase"
+    :data-table-ready="tableReady"
     :data-opening-stage="openingStage ?? ''"
     :data-dice-values="diceValues.join(',')"
     :data-dice-thrower-index="diceThrowerIndex"
@@ -615,7 +618,8 @@ function onAvatarError(entry: GamePlayer) {
         <div class="table-loading-card" :class="{ error: tableLoadError }">
           <template v-if="tableLoadError">
             <strong>牌桌资源加载失败</strong>
-            <span>请检查网络后重试</span>
+            <span v-if="/WebGL|context/i.test(tableLoadError)">无法启动 3D 牌桌，请更新浏览器或 Android System WebView，并确认设备支持 WebGL 2。</span>
+            <span v-else>{{ isAndroidApp ? '请重新打开应用后重试' : '请检查网络后重试' }}</span>
             <button type="button" @click="retryTableLoad">重试</button>
           </template>
           <template v-else>
@@ -711,7 +715,7 @@ function onAvatarError(entry: GamePlayer) {
         <span v-if="dealer === 0" class="dealer-badge">庄</span>
         <span v-if="user.isMingLou" class="minglou-badge" title="明搂">搂</span>
         <span v-if="user.isBaoTing && !user.isMingLou" class="baoting-badge" title="报听">听</span>
-        <span v-if="userFlowerCount > 0" class="flower-badge" :title="`花牌: ${userFlowerCount}张`">🌸{{ userFlowerCount }}</span>
+        <FlowerCollection :player="user" :theme-name="themeName" />
         <img class="avatar" :src="userAvatar" :alt="`${user.name}头像`" @error="onAvatarError(user)" />
         <div class="player-info"><strong>{{ user.name }}</strong><span>{{ user.score }}</span></div>
         <button v-if="bloodFlow" type="button" class="blood-flow-pile-badge win-count-bottom" :data-pile-seat="user.seat"
@@ -1027,7 +1031,7 @@ function onAvatarError(entry: GamePlayer) {
   opacity: 0;
   transform: translate(-50%, -10px) scale(0.95);
 }
-@container (max-width: 768px), (max-height: 520px) {
+@container (max-width: 768px) or (max-height: 520px) {
   .gang-head-indicator {
     top: 36px;
   }

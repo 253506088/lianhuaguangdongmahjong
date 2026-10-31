@@ -384,6 +384,8 @@ describe('山东麻将规则测试（图文规则精准落地）', () => {
         saveRuleVariantPreference,
         readShandongJiangPreference,
         saveShandongJiangPreference,
+        readShandongAllowChiPreference,
+        saveShandongAllowChiPreference,
       } = await import('../../core/rules/rulePreference')
 
       const mockStorage = new Map<string, string>()
@@ -395,6 +397,7 @@ describe('山东麻将规则测试（图文规则精准落地）', () => {
       // 初始未保存
       expect(readRuleVariantPreference(storageLike)).toBeNull()
       expect(readShandongJiangPreference(storageLike)).toBe('258')
+      expect(readShandongAllowChiPreference(storageLike)).toBe(true)
 
       // 保存山东麻将
       saveRuleVariantPreference('shandong', storageLike)
@@ -407,6 +410,14 @@ describe('山东麻将规则测试（图文规则精准落地）', () => {
       // 保存258
       saveShandongJiangPreference('258', storageLike)
       expect(readShandongJiangPreference(storageLike)).toBe('258')
+
+      // 保存不允许吃
+      saveShandongAllowChiPreference(false, storageLike)
+      expect(readShandongAllowChiPreference(storageLike)).toBe(false)
+
+      // 保存允许吃
+      saveShandongAllowChiPreference(true, storageLike)
+      expect(readShandongAllowChiPreference(storageLike)).toBe(true)
     })
   })
 
@@ -464,6 +475,101 @@ describe('山东麻将规则测试（图文规则精准落地）', () => {
       const evalMingLou = evaluateShandongHand(player, hand, [], { selfDraw: true, isMingLou: true })
       expect(evalMingLou?.patterns.some((p) => p.name === '明搂')).toBe(true)
       expect(evalMingLou?.totalMultiplier).toBe(16) // 一条龙 (4) * 门清 (2) * 明搂 (2) = 16
+    })
+  })
+
+  describe('吃牌配置项与报听后明楼测试', () => {
+    it('useShandongGame 支持 getAllowChiRule，配置为 false 时禁用吃牌能力', async () => {
+      const { useShandongGame } = await import('./shandongGame')
+      const gameDisallowChi = useShandongGame({
+        headless: true,
+        getAllowChiRule: () => false,
+      })
+      expect(gameDisallowChi.capabilities.value.chi.available).toBe(false)
+
+      const gameAllowChi = useShandongGame({
+        headless: true,
+        getAllowChiRule: () => true,
+      })
+      expect(gameAllowChi.capabilities.value.chi.available).toBe(true)
+    })
+
+    it('报听后允许明楼：明楼后不可点炮胡，只能纯自摸胡且翻倍', async () => {
+      const { createShandongGameState } = await import('./shandongState')
+      const { createShandongSelectors } = await import('./shandongSelectors')
+      const { createShandongHuman } = await import('./shandongHuman')
+      const { resetLocalPlayers } = await import('../../shared/runtime/localOpening')
+      const { vi } = await import('vitest')
+
+      const state = createShandongGameState()
+      state.luanJiang.value = true
+      resetLocalPlayers(state, 2000)
+
+      // 玩家0已听牌
+      state.players[0].hand = ['m1', 'm2', 'm3', 'm4', 'm5', 'm6', 'm7', 'm8', 'm9', 'p1', 'p2', 'p3', 's5'] as TileType[]
+      state.phase.value = 'discard'
+      state.currentPlayer.value = 0
+
+      const selectors = createShandongSelectors(state)
+
+      // 1. 玩家报听
+      state.baoTingPlayers.value.add(0)
+      state.players[0].isBaoTing = true
+
+      // 报听后允许明楼
+      expect(selectors.userCanMingLou.value).toBe(true)
+
+      const announced: string[] = []
+      const playedSounds: string[] = []
+      const human = createShandongHuman({
+        state,
+        humanController: {
+          resolveDiscard: vi.fn(),
+          resolveHu: vi.fn(),
+          resolveChi: vi.fn(),
+          resolveChiPass: vi.fn(),
+          resolveClaimPeng: vi.fn(),
+          resolveClaimGang: vi.fn(),
+          resolveClaimPass: vi.fn(),
+          resolveRobKongAction: vi.fn(),
+          resolveConcealedKong: vi.fn(),
+          resolveAddedKong: vi.fn(),
+          hasPendingTurn: () => false,
+          hasPendingHu: () => false,
+          hasPendingChi: () => false,
+          hasPendingClaim: () => false,
+          hasPendingRobKong: () => false,
+          reset: () => {},
+        } as any,
+        turnOrchestrator: {
+          discardTile: () => {},
+          canUserHu: () => false,
+        } as any,
+        getUser: () => selectors.user.value,
+        isUserTurn: () => selectors.isUserTurn.value,
+        canUserHu: () => selectors.userCanHu.value,
+        getUserKongs: () => selectors.userKongs.value,
+        userCanMingLou: () => selectors.userCanMingLou.value,
+        userCanBaoTing: () => selectors.userCanBaoTing.value,
+        stopCountdown: () => {},
+        announce: (msg) => announced.push(msg),
+        playSound: (s) => playedSounds.push(s),
+      } as any)
+
+      // 2. 玩家在报听后点击明楼
+      human.userMingLou()
+
+      expect(state.mingLouPlayers.value.has(0)).toBe(true)
+      expect(state.players[0].isMingLou).toBe(true)
+      expect(selectors.userCanMingLou.value).toBe(false)
+      expect(announced).toContain(`${state.players[0].name} 明搂！`)
+      expect(playedSounds).toContain('chihushandian.ogg')
+
+      // 3. 听牌预估番数翻倍
+      const waitWaits = selectors.userCurrentWaits.value
+      expect(waitWaits?.tiles.some((t) => t.tile === 's5')).toBe(true)
+      const s5Wait = waitWaits?.tiles.find((t) => t.tile === 's5')
+      expect(s5Wait?.multiplier).toBe(16) // 一条龙 (4) * 门清 (2) * 明搂 (2) = 16
     })
   })
 })

@@ -425,8 +425,12 @@ describe('山东麻将音频与语音播报', () => {
     // 玩家声明报听后
     state.baoTingPlayers.value.add(0)
     expect(selectors.userCanHu.value).toBe(true)
-    // 报听后不能重复报听或明楼
+    // 报听后不能重复报听；但允许继续声明明楼
     expect(selectors.userCanBaoTing.value).toBe(false)
+    expect(selectors.userCanMingLou.value).toBe(true)
+
+    // 升级为明楼后，不可再明楼
+    state.mingLouPlayers.value.add(0)
     expect(selectors.userCanMingLou.value).toBe(false)
   })
 

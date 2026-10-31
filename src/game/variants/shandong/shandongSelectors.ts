@@ -50,12 +50,17 @@ export function createShandongSelectors(state: ShandongGameState, ruleset: RuleS
     },
   })
 
-  // 检查本家是否可以明搂（处于自家出牌阶段、打牌可听或已听牌、且尚未明搂与报听）
+  // 检查本家是否可以明搂：
+  // 1. 已经明楼过的不可重复明楼；
+  // 2. 报听牌之后允许明楼（亮开手牌，不能点炮，纯自摸）；
+  // 3. 尚未报听时：处于自家出牌阶段，且打牌可听或已听牌。
   const userCanMingLou = computed(() => {
     const user = common.user.value
     if (!user) return false
+    if (state.mingLouPlayers.value.has(user.seat)) return false
+    // 报听牌之后允许明楼
+    if (state.baoTingPlayers.value.has(user.seat)) return true
     if (!common.isUserTurn.value) return false
-    if (state.mingLouPlayers.value.has(user.seat) || state.baoTingPlayers.value.has(user.seat)) return false
     return (playerSelectors.userTingOptions.value?.length ?? 0) > 0 || playerSelectors.userCurrentWaits.value !== null
   })
 

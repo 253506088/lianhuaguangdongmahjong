@@ -80,8 +80,8 @@ export function pileColumnsPerLevel(seat:number, compact:boolean) {
 }
 
 /** 前三行6张，后续每行10张；共用左端起点，向玩家右侧延伸成原来的L型。 */
-export function discardTileLayout(seat:number,index:number) {
-  const wide=index>=18, columns=wide?10:6, slot=wide?index-18:index
+export function discardTileLayout(seat:number,index:number,wideColumns = 10) {
+  const wide=index>=18, columns=wide?wideColumns:6, slot=wide?index-18:index
   const row=(wide?3:0)+Math.floor(slot/columns)
   const lateral=(slot%columns-2.5)*TABLE_LAYOUT.tilePitch
   const depth=(seat%2?2.64:2.48)+row*.95

@@ -7,6 +7,7 @@ import type { TableThemeName } from './table/three/tableTheme'
 import { animeCharacterAccent } from '../game/core/presentation/animeCharacterPalette'
 import { scoreDirection } from '../theme/themeEventPresentation'
 import MahjongTile from './MahjongTile.vue'
+import FlowerCollection from './table/FlowerCollection.vue'
 
 const props = withDefaults(defineProps<{
   player: GamePlayer
@@ -48,7 +49,7 @@ const flowerCount = computed(() => (props.player.melds || []).filter((m) => m.ty
       <span v-if="dealer" class="dealer-badge">庄</span>
       <span v-if="player.isMingLou" class="minglou-badge" title="明搂">搂</span>
       <span v-if="player.isBaoTing && !player.isMingLou" class="baoting-badge" title="报听">听</span>
-      <span v-if="flowerCount > 0" class="flower-badge" :title="`花牌: ${flowerCount}张`">🌸{{ flowerCount }}</span>
+      <FlowerCollection :player="player" :theme-name="themeName" />
       <img class="avatar" :src="avatarSrc" :alt="`${player.name}头像`" @error="onAvatarError" />
       <div class="player-info">
         <strong>{{ player.name }}</strong>
