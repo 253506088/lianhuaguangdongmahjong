@@ -31,3 +31,13 @@ Android 11 的旧 WebView 实测需要兼容容器查询、CSS `aspect-ratio`、
 - 正式包须使用同一签名证书升级，签名文件与口令配置被 `.gitignore` 排除。
 
 构建和重复验收方式见 [Android 说明](android.md)。
+
+## 中断恢复后的收尾复验
+
+- 修复了对家花牌按钮被透明顶栏拦截、短横屏顶边裁切的问题，并调整详情标签与牌体阴影的间距。
+- 花牌 E2E 使用真实顶栏与音频上下文，逐一打开四家的花牌，再检查主题菜单；全套离线 E2E 6 项通过，master 全量单测 2317 项通过、2 项原有跳过。
+- Android 16 再次验证断网开局、滑动出牌、花牌查看、原生返回键与后台恢复；截图和报告位于本地 `tmp/resumed-fixed-smoke-16`。
+- Android 11 / WebView 83 在干净源码提交 `c7edb54` 上重新构建并验证同一流程，全部通过、无 JS 异常；取证位于 `tmp/delivery-smoke-11`。报告记录 APK 的 SHA-256、源码提交和工作区状态，截图等待合成帧后获取。
+- 正式 APK 来自 `c7edb54`，版本 1.1.0、最低 API 30。Android `apksigner` 验签通过，包内全部 328 个游戏资源与 `dist-android` 逐一校验一致。交付副本位于 `artifacts/android/mahjong-1.1.0.apk`，大小 63,880,371 字节；SHA-256 为 `d5a6ec291b8ba44a791924999613fe8e3d732bf2e09ca60a518ba2a52693b165`。
+
+安装包、截图、日志、签名密钥与本地配置均被 Git 忽略。`artifacts/android/build-info.json` 和 `SHA256SUMS.txt` 供本地核对，源码、许可、构建脚本和验证说明纳入版本管理。
