@@ -27,6 +27,7 @@ export default defineConfig({
   }],
   build: {
     outDir: 'dist-android',
+    emptyOutDir: true,
     target: 'chrome83',
     cssTarget: 'chrome83',
     sourcemap: false,
