@@ -1,5 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_NEARBY_SETTINGS, encodeInvitation, parseInvitation, randomId, roundLabel, type RoomSeat, type NearbySettings } from './protocol'
+import { DEFAULT_NEARBY_SETTINGS, encodeInvitation, parseInvitation, randomId, roundLabel, validSettings, type RoomSeat, type NearbySettings } from './protocol'
+import { createShandongWall } from '../variants/shandong/shandongRules'
+import type { TileType } from '../core/contracts/types'
 import { DecisionBroker, type JournalAction } from './decisions'
 import { legalChoices } from './controllers'
 import { createNearbyEngine, newRound } from './roomEngine'
@@ -23,6 +25,30 @@ async function startWithTimers(engine: ReturnType<typeof createNearbyEngine>, jo
 }
 
 describe('nearby invitation and infinite rounds', () => {
+  it('旧房间可缺省AI模式，未知策略不能成为合法房间设置', () => {
+    expect(validSettings({...DEFAULT_NEARBY_SETTINGS, aiMode: undefined})).toBe(true)
+    expect(validSettings({...DEFAULT_NEARBY_SETTINGS, aiMode: 'classic'})).toBe(true)
+    expect(validSettings({...DEFAULT_NEARBY_SETTINGS, aiMode: 'unknown'})).toBe(false)
+  })
+
+  it.each(['classic','efficiency'] as const)('附近同桌真实引擎按 %s 调用对应电脑策略', async aiMode => {
+    const config = {...settings('shandong'), aiMode}
+    const broker = new DecisionBroker(1)
+    broker.automated = seat => seat === 0
+    const members = seats(); members[0].bot = true
+    const journal = newRound(1, config)
+    const hand: TileType[] = ['m1','m2','m3','m4','m5','m6','m7','m8','m9','p1','p2','p3','s2','s5']
+    const pool = createShandongWall()
+    for (const tile of [...hand,'s5'] as TileType[]) pool.splice(pool.indexOf(tile),1)
+    journal.opening.initialWall = [...hand,...pool,'s5']
+    broker.onAction = action => journal.actions.push(structuredClone(action))
+    const engine = createNearbyEngine(config, members, broker, () => {})
+    try {
+      await engine.start(journal)
+      await vi.advanceTimersByTimeAsync(20)
+      expect(journal.actions[0]?.action).toMatchObject({kind: 'discard', handIndex: aiMode === 'classic' ? 12 : 13})
+    } finally { engine.close() }
+  })
   it('round-trips a pinned LAN invitation and rejects public addresses, bad versions and malformed keys', () => {
     const invite = { v: 1 as const, room: randomId(), key: randomId(), hosts: ['192.168.43.1'], port: 35000, fingerprint: 'a'.repeat(64) }
     expect(parseInvitation(encodeInvitation(invite))).toEqual(invite)

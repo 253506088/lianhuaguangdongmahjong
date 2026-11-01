@@ -16,6 +16,7 @@ import {
 import { countTiles } from '../../shared/rules/tileTools'
 import { TILE_TYPES } from '../../core/rules/tiles'
 import { shandongShanten } from './shandongEfficiency'
+import type { ShandongAiMode } from './shandongAiMode'
 
 export type ShandongTurnDecision =
   | { kind: 'win' }
@@ -31,6 +32,7 @@ export type ShandongClaimAction =
   | { kind: 'pass' }
 
 export interface ShandongTurnContext {
+  aiMode?: ShandongAiMode
   hand: TileType[]
   melds: Meld[]
   isMingLou?: boolean
@@ -85,7 +87,32 @@ function evaluateTileUtility(tile: TileType, hand: TileType[], luanJiang?: boole
   return 20 + neighbors + eyeBonus
 }
 
-/** 智能选择切牌索引 */
+/** 优化前的弃牌策略：先比较听口种类，不听时切掉结构效用最低的牌。 */
+export function chooseClassicDiscardIndex(hand: TileType[], melds: Meld[] = [], luanJiang?: boolean): { index: number; reachesTing: boolean } {
+  let bestTingIndex = -1
+  let maxWaitCount = -1
+  for (let index = 0; index < hand.length; index++) {
+    const waits = waitingTiles(hand.filter((_, i) => i !== index), melds, { luanJiang })
+    if (waits.length > maxWaitCount) {
+      maxWaitCount = waits.length
+      bestTingIndex = index
+    }
+  }
+  if (maxWaitCount > 0) return { index: bestTingIndex, reachesTing: true }
+
+  let lowestUtility = Infinity
+  let worstIndex = hand.length - 1
+  for (let index = 0; index < hand.length; index++) {
+    const utility = evaluateTileUtility(hand[index], hand, luanJiang)
+    if (utility < lowestUtility) {
+      lowestUtility = utility
+      worstIndex = index
+    }
+  }
+  return { index: worstIndex, reachesTing: false }
+}
+
+/** 牌效版选择切牌索引；经典版独立保留，不随该函数的后续优化改变。 */
 export function chooseBestDiscardIndex(hand: TileType[], melds: Meld[] = [], luanJiang?: boolean, visibleTiles?: readonly TileType[]): { index: number; reachesTing: boolean } {
   const best = rankDiscardOptions(hand, melds, luanJiang, visibleTiles)[0]
   // 已知所有听牌均耗尽时不主动锁手，仍可继续改良。
@@ -169,7 +196,9 @@ export function decideTurn(ctx: ShandongTurnContext): ShandongTurnDecision {
   }
 
   // 4. 选择最佳切牌
-  const { index, reachesTing } = chooseBestDiscardIndex(ctx.hand, ctx.melds, ctx.luanJiang, ctx.visibleTiles)
+  const { index, reachesTing } = ctx.aiMode === 'classic'
+    ? chooseClassicDiscardIndex(ctx.hand, ctx.melds, ctx.luanJiang)
+    : chooseBestDiscardIndex(ctx.hand, ctx.melds, ctx.luanJiang, ctx.visibleTiles)
 
   // 报听与明楼决策：在山东麻将中，必须报听才能胡牌；AI 听牌时必须报听（或偶尔明楼博加倍）
   let declareMingLou = false

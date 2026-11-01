@@ -5,6 +5,8 @@ import GameSettingsSummary from './GameSettingsSummary.vue'
 import LobbyDialog from './LobbyDialog.vue'
 import MatchTypePicker from './MatchTypePicker.vue'
 import RuleVariantPicker from './RuleVariantPicker.vue'
+import ShandongAiModePicker from '../ShandongAiModePicker.vue'
+import type { ShandongAiMode } from '../../game/variants/shandong/shandongAiMode'
 import { bloodFlowEnabled } from '../../game/variants/lotus/bloodFlow/availability'
 import type { GameMode } from '../../game/core/contracts/activeGamePort'
 import type { MatchType } from '../../game/core/contracts/types'
@@ -22,6 +24,7 @@ interface Props {
   selectedRule: RuleVariant
   shandongJiang?: '258' | 'luan'
   shandongAllowChi?: boolean
+  shandongAiMode?: ShandongAiMode
   matchName: string
   storedSession: StoredSession | null
   roomId: string
@@ -68,6 +71,7 @@ const emit = defineEmits<{
   'update:selectedRule': [value: RuleVariant]
   'update:shandongJiang': [value: '258' | 'luan']
   'update:shandongAllowChi': [value: boolean]
+  'update:shandongAiMode': [value: ShandongAiMode]
   'update:nicknameInput': [value: string]
   'update:joinCode': [value: string]
   'update:animeCharacterId': [value: CharacterId]
@@ -237,6 +241,7 @@ function toggleWakuDemoAuth() {
             @select-match="openPicker('match')"
             @select-rule="openPicker('rule')"
           />
+          <ShandongAiModePicker v-if="selectedRule === 'shandong'" :model-value="shandongAiMode" @update:model-value="$emit('update:shandongAiMode', $event)" />
           <button class="start-button" data-action-role="primary" @click="$emit('startLocal')"><b>开始{{ matchOption.name }}</b><span>{{ startButtonRuleText }} · 四人对局</span></button>
         </template>
 

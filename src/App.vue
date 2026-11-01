@@ -16,6 +16,7 @@ import { useBloodFlowGame } from './game/variants/lotus/bloodFlow/useBloodFlowGa
 import { readShandongAllowChiPreference, saveShandongAllowChiPreference } from './game/core/rules/rulePreference'
 import { useShandongGame } from './game/variants/shandong/shandongGame'
 import { SHANDONG_BASE_SCORE } from './game/variants/shandong/shandongRules'
+import { readShandongAiModePreference, saveShandongAiModePreference, type ShandongAiMode } from './game/variants/shandong/shandongAiMode'
 import { isAndroidApp } from './platform/nativeApp'
 import { readRuleVariantPreference, saveRuleVariantPreference, readShandongJiangPreference, saveShandongJiangPreference } from './game/core/rules/rulePreference'
 import { useBloodFlowRemoteGame } from './game/variants/lotus/bloodFlow/useBloodFlowRemoteGame'
@@ -84,6 +85,9 @@ const shandongJiang = ref<'258' | 'luan'>(readShandongJiangPreference())
 watch(selectedRule, value => saveRuleVariantPreference(value))
 watch(shandongJiang, value => saveShandongJiangPreference(value))
 const shandongAllowChi = ref(readShandongAllowChiPreference())
+const shandongAiMode = ref<ShandongAiMode>(readShandongAiModePreference())
+watch(shandongAiMode, value => saveShandongAiModePreference(value))
+watch(nearbyOpen, open => { if (!open) shandongAiMode.value = readShandongAiModePreference() })
 watch(shandongAllowChi, value => saveShandongAllowChiPreference(value))
 const gameTableReady = ref(false)
 let tableReadyPromise: Promise<void> | null = null
@@ -302,6 +306,7 @@ const lotusGame = useLotusGame({
   analysisSink: lotusLegacyAnalysisSink,
 })
 const shandongGame = useShandongGame({
+  getAiMode: () => shandongAiMode.value,
   recorder: replay.hooks,
   playSound: playEffect,
   playSoundAndWait: playEffectAndWait,
@@ -868,6 +873,7 @@ function changeTableTheme(theme: TableThemeName) {
         v-model:selected-rule="selectedRule"
         v-model:shandong-jiang="shandongJiang"
         v-model:shandong-allow-chi="shandongAllowChi"
+        v-model:shandong-ai-mode="shandongAiMode"
         v-model:nickname-input="nicknameInput"
         v-model:join-code="joinCode"
         v-model:anime-character-id="animeCharacterId"

@@ -54,6 +54,25 @@ function client(net: ReturnType<typeof network>, storage = memory()) {
   return { room, end, storage }
 }
 
+it('房主可在开局前选择AI，客人收到设置；开局后策略锁定并保留到恢复存档', async () => {
+  const net = network(), host = client(net), guest = client(net)
+  await host.room.create('Host')
+  host.room.configure({...DEFAULT_NEARBY_SETTINGS, aiMode: 'classic'})
+  await guest.room.join(host.room.invite.value!, 'Guest'); await flush()
+  expect(guest.room.room.value!.settings.aiMode).toBe('classic')
+  guest.room.configure({...DEFAULT_NEARBY_SETTINGS, aiMode: 'efficiency'})
+  expect(host.room.room.value!.settings.aiMode).toBe('classic')
+  guest.room.act('ready', {ready: true}); await flush()
+  await host.room.start(); await flush()
+  host.room.configure({...DEFAULT_NEARBY_SETTINGS, aiMode: 'efficiency'})
+  expect(host.room.room.value!.settings.aiMode).toBe('classic')
+  host.room.configure({...DEFAULT_NEARBY_SETTINGS, aiMode: undefined, takeover: true})
+  expect(host.room.room.value!.settings.aiMode).toBe('classic')
+  expect(host.room.room.value!.settings.takeover).toBe(true)
+  const saved = readNearbySave(host.storage)
+  expect(saved?.role === 'host' && saved.room.settings.aiMode).toBe('classic')
+})
+
 it.each([2, 3, 4])('%i humans: host owns settings, all humans ready, empty seats become bots, peers see only their hand', async count => {
   const net = network(), host = client(net), guests = Array.from({ length: count - 1 }, () => client(net))
   await host.room.create('Host')

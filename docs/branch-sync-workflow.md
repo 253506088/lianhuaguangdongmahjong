@@ -63,3 +63,5 @@
 ## 山东共享装配（2026-11-02）
 
 `App.vue` 仍先完整保留 vibehub 版本。同步脚本随后只对山东本地装配做幂等替换：接入 `recorder: replay.hooks`、启动选择 `DEFAULT_RULE_VARIANT`、传递山东规则面板配置和实际底分。不会复制 master 的 App，也不会合并 WebSocket、P2P、大厅或认证装配。`test-sync-worktrees.ps1` 以独立临时仓库验证这几行接线以及重复同步不重复插入。
+
+AI模式并存后，同一段窄同步也维护本地AI模式的偏好状态、引擎参数和`LobbyView`选择器。只修改这几个已明确的共享位置，不复制整个大厅；临时仓库测试验证私有P2P代码保持原样、Vue导入留在script内，以及重复同步不重复插入控件或状态。

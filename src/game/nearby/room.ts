@@ -4,6 +4,7 @@ import { DecisionBroker } from './decisions'
 import { createNearbyEngine, newRound, type NearbyEngine, type RoundJournal } from './roomEngine'
 import { DEFAULT_NEARBY_SETTINGS, NEARBY_VERSION, randomId, validSettings, type Invitation, type NearbySettings, type RoomView, type RoomSeat, type Decision } from './protocol'
 import type { NearbyTableView } from './tableView'
+import { normalizeShandongAiMode } from '../variants/shandong/shandongAiMode'
 
 const SAVE_KEY = 'mahjong.nearby.v1'
 interface HostSave { role: 'host'; invite: Invitation; room: RoomView; tokens: string[]; journal: RoundJournal | null }
@@ -276,8 +277,10 @@ export function createNearbyRoom(transport: NearbyTransport, storage: RoomStorag
   }
   function configure(settings: NearbySettings) {
     if (!host.value || !room.value || !validSettings(settings)) return
-    if (room.value.started && (settings.rule !== room.value.settings.rule || settings.jiang !== room.value.settings.jiang || settings.chi !== room.value.settings.chi)) return
-    Object.assign(room.value.settings, settings)
+    const aiMode = normalizeShandongAiMode(settings.aiMode ?? room.value.settings.aiMode)
+    if (room.value.started && (settings.rule !== room.value.settings.rule || settings.jiang !== room.value.settings.jiang || settings.chi !== room.value.settings.chi
+      || aiMode !== normalizeShandongAiMode(room.value.settings.aiMode))) return
+    Object.assign(room.value.settings, settings, { aiMode })
     if (!room.value.started) room.value.seats.forEach(s => { if (s.seat !== 0) s.ready = false })
     persist(); broker.refresh(); changed(); void maybeAdvance()
   }

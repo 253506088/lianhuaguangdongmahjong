@@ -209,9 +209,34 @@ try {
     $appText = $appText.Replace(':base-score="selectedRule === ''lotus-blood-flow'' ? BLOOD_FLOW_CONFIG.basePoints : undefined"', ':base-score="selectedRule === ''shandong'' ? SHANDONG_BASE_SCORE : selectedRule === ''lotus-blood-flow'' ? BLOOD_FLOW_CONFIG.basePoints : undefined"')
     $appText = $appText.Replace('<RulesPanel :open="rulesOpen" :variant="selectedRule" @close=', '<RulesPanel :open="rulesOpen" :variant="selectedRule" :shandong-jiang="shandongJiang" :shandong-allow-chi="shandongAllowChi" @close=')
     $appText = $appText.Replace('@quit="quitMatch"', '@quit="gameMode === ''local'' ? returnToLobby() : quitMatch()"')
+    if (-not $appText.Contains('const shandongAiMode =')) {
+      $modeSetup = "const shandongAiMode = ref<ShandongAiMode>(readShandongAiModePreference())`nwatch(shandongAiMode, value => saveShandongAiModePreference(value))`n"
+      $appText = $appText.Replace("import { useShandongGame } from './game/variants/shandong/shandongGame'", "import { useShandongGame } from './game/variants/shandong/shandongGame'`nimport { readShandongAiModePreference, saveShandongAiModePreference, type ShandongAiMode } from './game/variants/shandong/shandongAiMode'")
+      $appText = $appText.Replace('const shandongGame = useShandongGame({', $modeSetup + 'const shandongGame = useShandongGame({')
+    }
+    if (-not $shandongCall.Groups[1].Value.Contains('getAiMode:')) {
+      $appText = $appText.Replace('const shandongGame = useShandongGame({', "const shandongGame = useShandongGame({`n  getAiMode: () => shandongAiMode.value,")
+    }
+    if (-not $appText.Contains('v-model:shandong-ai-mode=')) {
+      $appText = $appText.Replace('v-model:shandong-allow-chi="shandongAllowChi"', "v-model:shandong-allow-chi=""shandongAllowChi""`n          v-model:shandong-ai-mode=""shandongAiMode""")
+    }
     [IO.File]::WriteAllText($appPath, $appText, [Text.UTF8Encoding]::new($false))
     git add -- src/App.vue
     if ($LASTEXITCODE -ne 0) { throw 'Cannot stage shared Shandong App wiring' }
+  }
+
+  # The local AI picker is shared; keep every other lobby/online line intact.
+  $lobbyPath = Join-Path (Get-Location) 'src/components/lobby/LobbyView.vue'
+  $lobbyText = [IO.File]::ReadAllText($lobbyPath)
+  if ($lobbyText.Contains('import RuleVariantPicker') -and -not $lobbyText.Contains('import ShandongAiModePicker')) {
+    $lobbyText = $lobbyText.Replace("import RuleVariantPicker from './RuleVariantPicker.vue'", "import RuleVariantPicker from './RuleVariantPicker.vue'`nimport ShandongAiModePicker from '../ShandongAiModePicker.vue'`nimport type { ShandongAiMode } from '../../game/variants/shandong/shandongAiMode'")
+    $lobbyText = $lobbyText.Replace('  shandongAllowChi?: boolean', "  shandongAllowChi?: boolean`n  shandongAiMode?: ShandongAiMode")
+    $lobbyText = $lobbyText.Replace("  'update:shandongAllowChi': [value: boolean]", "  'update:shandongAllowChi': [value: boolean]`n  'update:shandongAiMode': [value: ShandongAiMode]")
+    $picker = '<ShandongAiModePicker v-if="selectedRule === ''shandong''" :model-value="shandongAiMode" @update:model-value="$emit(''update:shandongAiMode'', $event)" />'
+    $lobbyText = $lobbyText.Replace('<button class="start-button"', $picker + "`n          " + '<button class="start-button"')
+    [IO.File]::WriteAllText($lobbyPath, $lobbyText, [Text.UTF8Encoding]::new($false))
+    git add -- src/components/lobby/LobbyView.vue
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot stage shared Shandong lobby picker' }
   }
 
   # Master-only WebSocket files that vibehub does not use（定义见上方）：合并后若仍存在则移除。

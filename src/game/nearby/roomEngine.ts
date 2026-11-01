@@ -2,6 +2,7 @@ import { effectScope, watch, type EffectScope } from 'vue'
 import { useGame } from '../core/local/useGame'
 import { useLotusGame } from '../variants/lotus/lotusGame'
 import { useShandongGame } from '../variants/shandong/shandongGame'
+import { normalizeShandongAiMode } from '../variants/shandong/shandongAiMode'
 import { createWall, shuffle } from '../core/rules/tiles'
 import { createShandongWall, ensureTailNotFlower } from '../variants/shandong/shandongRules'
 import type { GamePort, GameStartOptions } from '../core/contracts/gamePort'
@@ -42,7 +43,7 @@ export function createNearbyEngine(settings: NearbySettings, seats: RoomSeat[], 
   scope.run(() => {
     const seeds = seats.map(s => ({ name: s.name, avatar: defaultAvatarForSeat(s.seat), playerKind: s.bot ? 'bot' as const : 'human' as const }))
     const options = { controllers, countdownEnabled: false, headless: true, humanPlayerSeed: seeds[0], aiPlayerSeeds: seeds.slice(1) }
-    game = settings.rule === 'shandong' ? useShandongGame({ ...options, controllerDrivenLockedTurns: true, getJiangRule: () => settings.jiang, getAllowChiRule: () => settings.chi })
+    game = settings.rule === 'shandong' ? useShandongGame({ ...options, controllerDrivenLockedTurns: true, getJiangRule: () => settings.jiang, getAllowChiRule: () => settings.chi, getAiMode: () => normalizeShandongAiMode(settings.aiMode) })
       : settings.rule === 'lotus-legacy' ? useLotusGame(options) : useGame(options)
     // Source changes are coalesced by the room before serializing private views.
     watch(() => [game.phase.value, game.players, game.wallCount.value, game.result.value, game.tableActionEvent.value, game.scoreFlowEvent.value,
