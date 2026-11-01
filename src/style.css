@@ -633,7 +633,7 @@ button { font: inherit; }
 .user-area, .hand-rack { pointer-events: none; }
 .user-identity, .hand-tile-slot { pointer-events: auto; }
 /* On the narrowest landscape screens, keep the avatar clear of the first tiles. */
-@media (max-width: 600px) and (max-height: 450px) {
+@container (max-width: 600px) and (max-height: 450px) {
   .game-app .user-identity {
     bottom: calc(var(--safe-bottom, 0px) + 72px);
     transform: scale(.75);
