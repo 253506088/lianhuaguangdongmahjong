@@ -503,6 +503,8 @@ export function isHuaHu(player: GamePlayer): boolean {
 
 /** 是否能和牌 */
 export function isWinningHand(hand: TileType[], melds: Meld[] = [], options?: WinCheckOptions | boolean): boolean {
+  // 八仙过海在第八张花牌亮出时立即成立，无需先补齐普通手牌。
+  if (melds.filter((meld) => meld.type === 'flower').length >= 8) return true
   // 特殊豁免 258 将的牌型
   if (isThirteenOrphans(hand, melds)) return true
   if (isShiSanBuKao(hand, melds)) return true
@@ -751,6 +753,12 @@ export function waitingTiles(hand: TileType[], melds: Meld[] = [], options?: Win
     }
   }
   return waits
+}
+
+/** 声明报听/明搂必须检查本次弃牌，不能仅检查手中存在其他可听打法。 */
+export function canDeclareAfterDiscard(hand: TileType[], melds: Meld[], handIndex: number, options?: WinCheckOptions): boolean {
+  return Number.isInteger(handIndex) && handIndex >= 0 && handIndex < hand.length
+    && waitingTiles(hand.filter((_, index) => index !== handIndex), melds, options).length > 0
 }
 
 export interface MingLouWaitItem {

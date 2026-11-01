@@ -19,6 +19,7 @@ interface ShandongOpeningOptions {
   endGame(winnerIndex: number, options?: { selfDraw?: boolean; tianhu?: boolean; winTile?: TileType }): unknown
   playerSeeds?: Array<PlayerSeed | undefined>
   humanPlayerSeed?: PlayerSeed
+  onRoundReady?(initialWall: TileType[]): void
 }
 
 export function createShandongOpening(options: ShandongOpeningOptions) {
@@ -66,6 +67,8 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
     state.baoTingPlayers.value.clear()
     state.passedHuPlayers.value.clear()
     state.passedPengTiles.value.clear()
+    state.roundFirstDiscard.value = false
+    state.lastNormalDrawPlayer.value = null
     state.players.forEach((p) => {
       p.isMingLou = false
       p.isBaoTing = false
@@ -77,6 +80,7 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
     // 洗牌（144张牌）
     const wall = startOptions.initialWall ? [...startOptions.initialWall] : shuffle(createShandongWall())
     ensureTailNotFlower(wall)
+    const initialWall = [...wall]
     state.wall.value = wall
     state.gangHeadTile.value = wall.length > 0 ? wall[wall.length - 1] : null
     state.wallHeadDrawn.value = 0
@@ -137,8 +141,17 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
     state.openingStage.value = null
     state.phase.value = 'playing'
 
-    // 庄家天胡判定
     const dealerPlayer = state.players[state.dealer.value]
+    dealerPlayer.drawnTileIndex = dealerPlayer.hand.length - 1
+    state.currentPlayer.value = state.dealer.value
+    options.onRoundReady?.(initialWall)
+
+    const flowerWinner = state.players.findIndex(player => player.melds.filter(meld => meld.type === 'flower').length >= 8)
+    if (flowerWinner >= 0) {
+      options.endGame(flowerWinner, { selfDraw: true, winTile: state.players[flowerWinner].melds.filter(meld => meld.type === 'flower').at(-1)!.tile })
+      return
+    }
+    // 庄家天胡判定
     if (isWinningHand(dealerPlayer.hand, dealerPlayer.melds, { luanJiang: state.luanJiang.value })) {
       options.announce(`${dealerPlayer.name} 天胡！`, 'gold')
       options.endGame(state.dealer.value, {

@@ -15,6 +15,7 @@ import { useLotusGame } from './game/variants/lotus/lotusGame'
 import { useBloodFlowGame } from './game/variants/lotus/bloodFlow/useBloodFlowGame'
 import { readShandongAllowChiPreference, saveShandongAllowChiPreference } from './game/core/rules/rulePreference'
 import { useShandongGame } from './game/variants/shandong/shandongGame'
+import { SHANDONG_BASE_SCORE } from './game/variants/shandong/shandongRules'
 import { isAndroidApp } from './platform/nativeApp'
 import { readRuleVariantPreference, saveRuleVariantPreference, readShandongJiangPreference, saveShandongJiangPreference } from './game/core/rules/rulePreference'
 import { useBloodFlowRemoteGame } from './game/variants/lotus/bloodFlow/useBloodFlowRemoteGame'
@@ -77,7 +78,8 @@ const robotIconUrl = `${import.meta.env.BASE_URL}img/robot.svg`
 const rulesOpen = ref(false)
 const resultVisible = ref(true)
 const selectedMatch = ref<MatchType>('east')
-const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)
+// H5 与 Android 每次启动优先进入山东；大厅内仍可手动切换其他玩法。
+const selectedRule = ref<RuleVariant>(DEFAULT_RULE_VARIANT)
 const shandongJiang = ref<'258' | 'luan'>(readShandongJiangPreference())
 watch(selectedRule, value => saveRuleVariantPreference(value))
 watch(shandongJiang, value => saveShandongJiangPreference(value))
@@ -300,6 +302,7 @@ const lotusGame = useLotusGame({
   analysisSink: lotusLegacyAnalysisSink,
 })
 const shandongGame = useShandongGame({
+  recorder: replay.hooks,
   playSound: playEffect,
   playSoundAndWait: playEffectAndWait,
   countdownEnabled: false,
@@ -773,14 +776,14 @@ function changeTableTheme(theme: TableThemeName) {
         :match-name="matchName"
         :round-label="roundLabel"
         :honba="honba"
-        :base-score="selectedRule === 'lotus-blood-flow' ? BLOOD_FLOW_CONFIG.basePoints : undefined"
+        :base-score="selectedRule === 'shandong' ? SHANDONG_BASE_SCORE : selectedRule === 'lotus-blood-flow' ? BLOOD_FLOW_CONFIG.basePoints : undefined"
         :room-id="roomId"
         :signal-quality="signalQuality"
         :signal-warning-threshold="1"
         :theme-name="tableThemeName"
         :theme-locked="themeLocked"
         :theme-lock-reason="themeLockReason"
-        @quit="quitMatch"
+        @quit="gameMode === 'local' ? returnToLobby() : quitMatch()"
         @open-rules="rulesOpen = true"
         @change-theme="changeTableTheme"
       />
@@ -962,7 +965,7 @@ function changeTableTheme(theme: TableThemeName) {
         @preview-four-red="debugFourRed"
       />
     </div>
-    <RulesPanel :open="rulesOpen" :variant="selectedRule" @close="rulesOpen = false" />
+    <RulesPanel :open="rulesOpen" :variant="selectedRule" :shandong-jiang="shandongJiang" :shandong-allow-chi="shandongAllowChi" @close="rulesOpen = false" />
     <button
       v-if="gameMode === 'local' && showLobby"
       class="llm-fab"

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { buildReplayExport, downloadReplayExport, replayExportFilename } from './export'
-import type { ReplayMatch, ReplayRound } from './types'
+import { REPLAY_SCHEMA_VERSION, type ReplayMatch, type ReplayRound } from './types'
 
 const MATCH: ReplayMatch = {
   id: '3f8a1c2e-9b7d-4e5f-8a10-1234567890ab',
@@ -61,7 +61,8 @@ describe('牌谱导出', () => {
   it('打包场次与各局，并按局号升序（文件内容可比对）', () => {
     const payload = buildReplayExport(MATCH, [round(2, '东2局'), round(1, '东1局')], 1_700_000_950_000)
     expect(payload.kind).toBe('lianhua-replay')
-    expect(payload.schemaVersion).toBe(MATCH.schemaVersion)
+    expect(payload.schemaVersion).toBe(REPLAY_SCHEMA_VERSION)
+    expect(payload.match.schemaVersion).toBe(1) // 保留旧场次的录制版本，文件封装使用当前版本。
     expect(payload.exportedAt).toBe(1_700_000_950_000)
     expect(payload.match.id).toBe(MATCH.id)
     expect(payload.rounds.map((item) => item.roundIndex)).toEqual([1, 2])

@@ -82,7 +82,10 @@ export function stepSummary(step: ReplayStep): string {
   const tile = step.tile ? tileName(step.tile) : ''
   switch (step.t) {
     case 'draw':
+      if (step.tile?.startsWith('f')) return `补花 ${tile}`
       return step.fromTail ? `补牌 ${tile}` : `摸 ${tile}`
+    case 'declaration':
+      return step.declaration === 'ming-lou' ? '明搂（仅自摸，赢输翻倍）' : '报听'
     case 'discard':
       return `打 ${tile}`
     case 'meld':

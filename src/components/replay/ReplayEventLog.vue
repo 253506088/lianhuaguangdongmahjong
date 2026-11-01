@@ -30,7 +30,7 @@ const rows = computed(() => props.frames
   .filter((frame) => frame.step)
   .map((frame, index, list) => {
     const step = frame.step!
-    const heavy = step.t === 'meld' || step.t === 'win'
+    const heavy = step.t === 'meld' || step.t === 'win' || step.t === 'declaration'
     return {
       index: frame.index,
       turn: frame.turn,

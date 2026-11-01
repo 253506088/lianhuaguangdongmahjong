@@ -3,6 +3,7 @@ import type { GamePlayer, TileType } from '../../core/contracts/types'
 import type { ShandongHumanController } from './shandongControllers'
 import type { ShandongGameState, ShandongEndGameOptions } from './shandongState'
 import type { createShandongTurnOrchestrator } from './shandongTurnOrchestrator'
+import { canDeclareAfterDiscard } from './shandongRules'
 
 interface ShandongHumanOptions {
   state: ShandongGameState
@@ -22,6 +23,7 @@ interface ShandongHumanOptions {
   announce(text: string, tone?: string): void
   playSound(name: string, volume?: number): unknown
   later(callback: () => void, delay: number): number
+  onDeclaration?(seat: number, kind: 'bao-ting' | 'ming-lou'): void
 }
 
 export function createShandongHuman(options: ShandongHumanOptions) {
@@ -30,6 +32,12 @@ export function createShandongHuman(options: ShandongHumanOptions) {
   let isDiscarding = false
   let pendingDeclareBaoTing = false
   let pendingDeclareMingLou = false
+
+  function resetDeclaration() {
+    pendingDeclareBaoTing = false
+    pendingDeclareMingLou = false
+    isDiscarding = false
+  }
 
   function selectTile(index: number) {
     if (!options.isUserTurn()) return
@@ -58,6 +66,11 @@ export function createShandongHuman(options: ShandongHumanOptions) {
       const drawnIndex = user.drawnTileIndex !== undefined && user.drawnTileIndex >= 0 ? user.drawnTileIndex : user.hand.length - 1
       if (index !== drawnIndex) return
     }
+    if ((pendingDeclareBaoTing || pendingDeclareMingLou)
+      && !canDeclareAfterDiscard(user.hand, user.melds, index, { luanJiang: state.luanJiang.value })) {
+      options.announce('打出这张牌不能听，请选择带听牌提示的牌；再次点击声明按钮可取消', 'red')
+      return
+    }
     isDiscarding = true
     const declareMingLou = pendingDeclareMingLou
     const declareBaoTing = pendingDeclareBaoTing
@@ -80,11 +93,17 @@ export function createShandongHuman(options: ShandongHumanOptions) {
     if (state.baoTingPlayers.value.has(user.seat)) {
       state.mingLouPlayers.value.add(user.seat)
       user.isMingLou = true
+      options.onDeclaration?.(user.seat, 'ming-lou')
       options.announce(`${user.name} 明搂！`, 'gold')
       options.playSound('chihushandian.ogg')
       return
     }
 
+    if (pendingDeclareMingLou) {
+      resetDeclaration()
+      options.announce('已取消明搂声明', 'gold')
+      return
+    }
     pendingDeclareMingLou = true
     pendingDeclareBaoTing = false
     // 如果已有选中手牌，则顺势切牌并打出报明楼
@@ -98,6 +117,11 @@ export function createShandongHuman(options: ShandongHumanOptions) {
 
   function userBaoTing() {
     if (options.userCanBaoTing && !options.userCanBaoTing()) return
+    if (pendingDeclareBaoTing) {
+      resetDeclaration()
+      options.announce('已取消报听声明', 'emerald')
+      return
+    }
     pendingDeclareBaoTing = true
     pendingDeclareMingLou = false
     // 如果已有选中手牌，则顺势切牌并打出报听
@@ -187,6 +211,7 @@ export function createShandongHuman(options: ShandongHumanOptions) {
   }
 
   return {
+    resetDeclaration,
     selectTile,
     clearUserSelection,
     userDiscard,

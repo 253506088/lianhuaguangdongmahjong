@@ -109,7 +109,7 @@ export function createRulePlayerSelectors(options: RuleSelectorOptions) {
           : hand.slice(0, -1))
       : hand
     return makeWaitInfo(
-      options.waitingTiles(user.value.hand, structuralMeldCount(user.value)),
+      options.waitingTiles(user.value.isBaoTing || user.value.isMingLou ? baseHand : hand, structuralMeldCount(user.value)),
       null,
       baseHand,
     )

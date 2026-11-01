@@ -50,8 +50,8 @@ function cloneMeld(meld: Meld): Meld {
 /** 点炮胡：赢家手牌不含和牌张，亮牌要把和牌张补回手牌末尾。 */
 function completeWinningHand(round: ReplayRound, winnerSeat: number, winTile?: TileType): TileType[] {
   const hand = [...(round.final?.hands[winnerSeat] ?? [])]
-  if (!winTile || hand.includes(winTile)) return hand
-  const drawWin = round.final?.winType === 'discard' || round.final?.winType === 'robbed-kong'
+  if (!winTile || hand.length % 3 !== 1) return hand
+  const drawWin = round.final?.winType === 'discard' || round.final?.winType === 'robbed-kong' || round.final?.winType === 'dihu'
   return drawWin ? [...hand, winTile] : hand
 }
 
@@ -69,6 +69,9 @@ export function buildReplayFrames(
   const discards = round.anchor.discards.map((list) => [...list])
   const drawn = [...round.anchor.drawnTileIndex]
   const redCount = [...round.anchor.redCount]
+  const baoTing = [...(round.anchor.isBaoTing ?? [false, false, false, false])]
+  const mingLou = [...(round.anchor.isMingLou ?? [false, false, false, false])]
+  let gangHeadTile = round.anchor.gangHeadTile
   let scores = [...round.anchor.scores]
   let wallLeft = round.anchor.wallLeft
   let headDrawn = round.anchor.headDrawn
@@ -132,6 +135,10 @@ export function buildReplayFrames(
       melds: frameMelds[seat].map(cloneMeld),
       redCount: redCount[seat] ?? 0,
       drawnTileIndex: frameDrawn[seat] ?? -1,
+      ...(match.rulesetId === 'shandong' ? {
+        isBaoTing: input.settled ? round.final?.isBaoTing?.[seat] ?? baoTing[seat] : baoTing[seat],
+        isMingLou: input.settled ? round.final?.isMingLou?.[seat] ?? mingLou[seat] : mingLou[seat],
+      } : {}),
     }))
 
     const localHand = [...frameHands[humanSeat]]
@@ -165,6 +172,9 @@ export function buildReplayFrames(
         wallBreakIndex: round.wallBreakIndex,
         flipTile: round.flipTile,
         flipStack: round.flipStack ?? undefined,
+        ...(match.rulesetId === 'shandong' ? {
+          gangHeadTile: input.settled ? round.final?.gangHeadTile ?? null : gangHeadTile,
+        } : {}),
         // 血流牌堆（盖楼）：到当前帧为止已经胡过的楼
         ...(isBloodFlow ? { bloodFlowBatches: [...winPiles] } : {}),
       },
@@ -194,6 +204,8 @@ export function buildReplayFrames(
       melds[step.seat] = step.state.melds.map(cloneMeld)
       drawn[step.seat] = step.state.drawnTileIndex
       redCount[step.seat] = step.state.redCount
+      if (step.state.isBaoTing !== undefined) baoTing[step.seat] = step.state.isBaoTing
+      if (step.state.isMingLou !== undefined) mingLou[step.seat] = step.state.isMingLou
       if (step.state.discards) discards[step.seat] = [...step.state.discards]
     }
     if (step.t === 'meld' && step.from != null && step.sourceDiscards) {
@@ -210,6 +222,7 @@ export function buildReplayFrames(
     wallLeft = step.wallLeft
     headDrawn = step.headDrawn
     currentPlayer = step.currentPlayer
+    if (step.gangHeadTile !== undefined) gangHeadTile = step.gangHeadTile
 
     // 血流：每一次胡牌都是新的一楼（一炮多响会是并列的楼，各自算一层）
     if (isBloodFlow && step.t === 'win' && step.tile) {

@@ -9,7 +9,7 @@ export interface NearbySettings {
   chi: boolean
 }
 export const DEFAULT_NEARBY_SETTINGS: NearbySettings = {
-  rule: 'lotus-classic', takeover: false, jiang: '258', chi: true,
+  rule: 'shandong', takeover: false, jiang: '258', chi: true,
 }
 export interface Invitation {
   v: 1

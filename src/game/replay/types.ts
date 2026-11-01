@@ -7,8 +7,8 @@ import type { GamePlayer, MatchType, Meld, TableActionType, TileType } from '../
 import type { RuleVariant } from '../core/rules/ruleVariants'
 import type { TableThemeName } from '../../theme/themeIdentity'
 
-/** 结构版本：字段不兼容变更时递增，旧记录按版本丢弃。 */
-export const REPLAY_SCHEMA_VERSION = 1
+/** v2 增加山东声明事件与杠头/规则快照；v1 记录继续兼容读取。 */
+export const REPLAY_SCHEMA_VERSION = 2
 /** 本地保留上限（场），超出按开始时间淘汰最旧。 */
 export const REPLAY_MAX_MATCHES = 50
 
@@ -23,7 +23,9 @@ export interface ReplayPlayer {
   startScore: number
 }
 
-export type ReplayStepKind = 'draw' | 'discard' | 'meld' | 'win'
+export type ReplayStepKind = 'draw' | 'discard' | 'meld' | 'win' | 'declaration'
+export type ReplayDeclaration = 'bao-ting' | 'ming-lou'
+export interface ReplayShandongRules { jiang: '258' | 'luan'; allowChi: boolean }
 
 export type ReplayMeldKind =
   | 'peng' | 'chi'
@@ -31,6 +33,8 @@ export type ReplayMeldKind =
 
 /** 某座位在某个动作之后的真实状态（只存发生变化的座位）。 */
 export interface ReplaySeatState {
+  isBaoTing?: boolean
+  isMingLou?: boolean
   hand: TileType[]
   melds: Meld[]
   drawnTileIndex: number
@@ -40,6 +44,10 @@ export interface ReplaySeatState {
 }
 
 export interface ReplayStep {
+  declaration?: ReplayDeclaration
+  drawReason?: 'normal' | 'flower' | 'kong'
+  /** 当前公开杠头；null 表示已经取尽，undefined 为旧牌谱。 */
+  gangHeadTile?: TileType | null
   t: ReplayStepKind
   /** 动作发起者（绝对座位）。 */
   seat: number
@@ -66,6 +74,9 @@ export interface ReplayStep {
 }
 
 export interface ReplayAnchor {
+  isBaoTing?: boolean[]
+  isMingLou?: boolean[]
+  gangHeadTile?: TileType | null
   hands: TileType[][]
   melds: Meld[][]
   discards: TileType[][]
@@ -78,6 +89,9 @@ export interface ReplayAnchor {
 }
 
 export interface ReplayRoundFinal {
+  isBaoTing?: boolean[]
+  isMingLou?: boolean[]
+  gangHeadTile?: TileType | null
   hands: TileType[][]
   melds: Meld[][]
   discards: TileType[][]
@@ -97,6 +111,9 @@ export interface ReplayRoundFinal {
 }
 
 export interface ReplayRound {
+  shandong?: ReplayShandongRules
+  /** 山东开局洗牌后的完整牌墙，用于复盘与确定性复现；旧牌谱可缺省。 */
+  initialWall?: TileType[]
   id: string
   matchId: string
   /** 场次内第几局（1 起，连庄也算新的一局）。 */
@@ -165,6 +182,9 @@ export interface ReplayMatch {
  * 各引擎按自身能力填字段（莲花麻将多翻精/精牌，血流留待后续接入）。
  */
 export interface ReplayFrameSource {
+  shandong?: ReplayShandongRules
+  initialWall?: TileType[]
+  gangHeadTile?: TileType | null
   players: GamePlayer[]
   wallLeft: number
   headDrawn: number
@@ -186,8 +206,9 @@ export interface ReplayFrameSource {
 
 /** 引擎侧需要回调的录制接口；useGame / lotusGame / 血流按需调用。 */
 export interface ReplayRecorderHooks {
+  declaration?(event: { seat: number; kind: ReplayDeclaration }, frame: ReplayFrameSource): void
   roundStart(frame: ReplayFrameSource): void
-  draw(event: { seat: number; tile: TileType; fromTail: boolean }, frame: ReplayFrameSource): void
+  draw(event: { seat: number; tile: TileType; fromTail: boolean; reason?: 'normal' | 'flower' | 'kong' }, frame: ReplayFrameSource): void
   discard(event: { seat: number; tile: TileType; id: number }, frame: ReplayFrameSource): void
   tableAction(
     event: {

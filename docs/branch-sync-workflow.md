@@ -59,3 +59,7 @@
 - 同步完成后建议在 vibehub 上跑 `pnpm test` 验证
 - 若改动涉及联机层（大厅/登录/传输），master 和 vibehub 需各自实现——这是两套后端的本质差异，无法合并
 - 清单维护：改脚本里的 `$vibehubKeep`（保留 vibehub 版）与 `$masterOnly`（删除）数组
+
+## 山东共享装配（2026-11-02）
+
+`App.vue` 仍先完整保留 vibehub 版本。同步脚本随后只对山东本地装配做幂等替换：接入 `recorder: replay.hooks`、启动选择 `DEFAULT_RULE_VARIANT`、传递山东规则面板配置和实际底分。不会复制 master 的 App，也不会合并 WebSocket、P2P、大厅或认证装配。`test-sync-worktrees.ps1` 以独立临时仓库验证这几行接线以及重复同步不重复插入。

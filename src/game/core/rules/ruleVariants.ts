@@ -10,24 +10,25 @@ export interface RuleVariantOption {
   rulesetId?: string
 }
 
-export const DEFAULT_RULE_VARIANT: RuleVariant = 'lotus-classic'
+export const DEFAULT_RULE_VARIANT: RuleVariant = 'shandong'
 
 export const SHANDONG_RULE: RuleVariantOption = {
   id: 'shandong',
   name: '山东麻将',
   description: '山东麻将现行规则',
   highlights: ['144张花牌', '258掌将', '可吃可碰', '明搂加倍'],
-  badge: '新玩法',
+  badge: '默认',
   rulesetId: 'shandong',
 }
 
 export const RULE_VARIANTS: readonly RuleVariantOption[] = [
+  SHANDONG_RULE,
   {
     id: 'lotus-classic',
     name: '莲花广麻',
     description: '莲花广麻现行规则',
     highlights: ['白板癞子', '仅自摸或抢杠胡', '胡后买 8 马'],
-    badge: '默认',
+    badge: '',
     rulesetId: 'lotus-classic',
   },
   {
@@ -38,7 +39,6 @@ export const RULE_VARIANTS: readonly RuleVariantOption[] = [
     badge: '',
     rulesetId: 'lotus-legacy',
   },
-  SHANDONG_RULE,
 ]
 
 export function getRuleVariant(id: RuleVariant) {
