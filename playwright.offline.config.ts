@@ -4,7 +4,7 @@ import base from './playwright.config'
 const port = Number(process.env.E2E_PORT || 4173)
 export default defineConfig({
   ...base,
-  testMatch: ['flowers.spec.ts', 'shandong-gang-head.spec.ts', 'lotus-legacy.smoke.spec.ts', 'blood-flow.local.spec.ts'],
+  testMatch: ['flowers.spec.ts', 'shandong-gang-head.spec.ts', 'tile-inspection.spec.ts', 'lotus-legacy.smoke.spec.ts', 'blood-flow.local.spec.ts'],
   // This mixed legacy spec also contains a WS room test requiring the backend.
   grepInvert: /in WS rooms/,
   webServer: {

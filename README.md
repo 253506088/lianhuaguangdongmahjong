@@ -8,6 +8,8 @@
 
 快速构建安装包：准备 Node.js 24、JDK 17、Android SDK 35 后，执行 `pnpm install --frozen-lockfile`、`pnpm android:debug`。APK 产物不提交 Git，可在本地构建目录或 GitHub Actions 的 Artifacts 获取。
 
+Windows 一键构建：双击 **`构建App.bat`** 生成正式签名的 Android 离线安装包（需配置签名，输出到 `artifacts/android`）；双击 **`构建前端.bat`** 生成 Web 静态文件（输出到 `dist`）。App 安装后普通 AI 对局无需后端或运行 `启动.bat`；自行配置的大模型 / TTS 需要相应网络服务。详见 [构建说明](docs/android.md)。
+
 [![GitHub Stars](https://img.shields.io/github/stars/BestGuo2020/lianhuaguangdongmahjong?style=flat&logo=github)](https://github.com/BestGuo2020/lianhuaguangdongmahjong/stargazers)
 [![License](https://img.shields.io/github/license/BestGuo2020/lianhuaguangdongmahjong)](./LICENSE)
 ![Node.js](https://img.shields.io/badge/Node.js-%5E20.19.0%20%7C%7C%20%3E%3D22.12.0-339933?logo=nodedotjs&logoColor=white)
@@ -151,6 +153,10 @@ http://localhost:4173
 **联机对战**需要配套的后端房间服务。开发环境下，前端请求同源的 `/api` 和 `/ws`，Vite 会将它们代理到 `http://127.0.0.1:8000`；`backend/` 为独立仓库（本仓库已将其忽略），本地可用 `docker compose up --build` 启动，部署与运行方式见 [backend/DEPLOY.md](./backend/DEPLOY.md)。生产环境建议让 Web 服务器将 `/api`、`/ws` 反向代理到后端；如果后端使用独立地址，则通过 `VITE_API_BASE` 指定（见「环境变量」）。
 
 ## 操作方式
+
+未知张数：悬停或轻触自己的手牌，可同时查看同花色相邻一张和自身的未知数量。例如七条显示六、七、八条，一万显示一、二万，九筒显示八、九筒；字牌只显示自身。点击牌河弃牌或其他人的副露、明楼牌，只查看点击牌的未知数量。非自己回合或报听锁牌时也可查看；点空白或按 Esc 收起提示。
+
+数量按自己的已知视角计算：每种牌四张，减去自己的手牌、所有弃牌与副露、其他人的明楼手牌和公开杠头。未知包含牌墙与他人暗手，不代表牌墙内实际还剩几张。
 
 电脑端：鼠标单击出牌
 

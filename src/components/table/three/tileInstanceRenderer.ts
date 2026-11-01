@@ -64,6 +64,7 @@ export function createTileInstanceRenderer(options: TileInstanceRendererOptions)
   let wildcardAtlasCapCount = 0
   let laiziAtlasCapCount = 0
   let instanceCount = 0
+  const capBaseIndices = new Map<THREE.InstancedMesh, number[]>()
   const matrix = new THREE.Matrix4()
   const scaleVector = new THREE.Vector3()
   const shadowMatrix = new THREE.Matrix4()
@@ -160,6 +161,7 @@ export function createTileInstanceRenderer(options: TileInstanceRendererOptions)
     wildcardAtlasCapCount = 0
     laiziAtlasCapCount = 0
     instanceCount = 0
+    capBaseIndices.clear()
   }
 
   function set(baseIndex: number, capMesh: THREE.InstancedMesh, capIndex: number, position: THREE.Vector3, quaternion: THREE.Quaternion, scale: number) {
@@ -197,6 +199,8 @@ export function createTileInstanceRenderer(options: TileInstanceRendererOptions)
         : wildcard ? wildcardAtlasCapCount++
           : laizi ? laiziAtlasCapCount++
             : atlasCapCount++
+    if (!capBaseIndices.has(capMesh)) capBaseIndices.set(capMesh, [])
+    capBaseIndices.get(capMesh)![capIndex] = baseIndex
     if (face) {
       const uv = options.atlasCellUvFor(face)
       const uvData = joker ? jokerAtlasUvData!
@@ -231,7 +235,18 @@ export function createTileInstanceRenderer(options: TileInstanceRendererOptions)
     if (laiziAtlasUvAttribute) laiziAtlasUvAttribute.needsUpdate = true
   }
 
-  return { begin, canReuse, add, set, finish }
+  function pick(raycaster: THREE.Raycaster): number | null {
+    if (!baseMesh) return null
+    const meshes = [baseMesh, ...capBaseIndices.keys()]
+    // Animation/reused instances can move outside a previously cached sphere.
+    for (const mesh of meshes) { mesh.computeBoundingSphere(); mesh.updateMatrixWorld() }
+    const hit = raycaster.intersectObjects(meshes, false)[0]
+    if (!hit || hit.instanceId === undefined) return null
+    return hit.object === baseMesh ? hit.instanceId
+      : capBaseIndices.get(hit.object as THREE.InstancedMesh)?.[hit.instanceId] ?? null
+  }
+
+  return { begin, canReuse, add, set, finish, pick }
 }
 
 export type TileInstanceRenderer = ReturnType<typeof createTileInstanceRenderer>

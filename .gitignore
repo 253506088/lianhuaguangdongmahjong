@@ -27,6 +27,8 @@ coverage
 *.lcov
 
 # Playwright output
+# 点击查牌的截图、浏览器报告、模拟器验收与测试日志均为可再生成证据。
+# 提交 tests/ 下的用例和 docs/ 下的验收记录，不提交下面的运行产物。
 test-results/
 playwright-report/
 tmp/
@@ -187,6 +189,8 @@ Thumbs.db
 /android/**/build/
 /android/captures/
 !/android/gradlew.bat
+!/构建App.bat
+!/构建前端.bat
 .cxx/
 
 # Android install packages and private signing material: distribute via release

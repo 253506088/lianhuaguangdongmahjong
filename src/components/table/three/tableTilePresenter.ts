@@ -15,6 +15,7 @@ import type { SourceTileEvent } from '../../../game/variants/lotus/bloodFlow/typ
 import type { BloodFlowCue } from '../../../game/variants/lotus/bloodFlow/presentation'
 import { sampleBloodFlowFlight, type FlightPose } from './bloodFlowTileFlight'
 import type { createStaticTableScene } from './staticTableScene'
+import type { PublicTileInspection } from '../tileInspection'
 
 type TableScene = Pick<ReturnType<typeof createStaticTableScene>,
   'makeDimmedHorseTile' | 'makeGoldGlow' | 'makeGoldVerticalGlow'>
@@ -88,9 +89,20 @@ export function createTableTilePresenter(options: TableTilePresenterOptions) {
   const addTableTile = tileInstances.add
   const finishTableInstances = tileInstances.finish
   const handFaceInstances: { seat: number; instance: ReturnType<TileInstanceRenderer['add']> }[] = []
+  const inspectableTiles = new Map<number, { info: PublicTileInspection; instance: ReturnType<TileInstanceRenderer['add']> }>()
+
+  function addInspectableTile(source: PublicTileInspection['source'], playerIndex: number, ...args: Parameters<TileInstanceRenderer['add']>) {
+    const instance = tileInstances.add(...args)
+    const tile = args[2]
+    if (tile && (source !== 'minglou' || props.players[playerIndex]?.isMingLou)) {
+      inspectableTiles.set(instance.baseIndex, { info: { tile, source, playerIndex }, instance })
+    }
+    return instance
+  }
 
 function addConcealedHand(playerIndex) {
   if (playerIndex === 0) return
+  const addTableTile = (...args: Parameters<TileInstanceRenderer['add']>) => addInspectableTile('minglou', playerIndex, ...args)
   const position = ['bottom', 'right', 'top', 'left'][playerIndex]
   const rawHand = props.players[playerIndex]?.hand ?? []
   const presentation = props.winPresentation?.winnerIndex === playerIndex
@@ -227,6 +239,7 @@ function discardSourcePos(playerIndex) {
 }
 
 function addDiscards(playerIndex) {
+  const addTableTile = (...args: Parameters<TileInstanceRenderer['add']>) => addInspectableTile('discard', playerIndex, ...args)
   const discards = props.players[playerIndex]?.discards || []
   discards.forEach((tileName, index) => {
     const highlighted = props.lastDiscard?.from === playerIndex && index === discards.length - 1
@@ -301,6 +314,7 @@ function sourceTileRotationOffset(relativeSource: number) {
 }
 
 function addMelds(playerIndex) {
+  const addTableTile = (...args: Parameters<TileInstanceRenderer['add']>) => addInspectableTile('meld', playerIndex, ...args)
   const melds = props.players[playerIndex]?.melds || []
   let trackOffset = 0
   melds.forEach((meld, meldIndex) => {
@@ -606,6 +620,7 @@ function rebuildTableTiles({ reuseInstances = false }: { reuseInstances?: boolea
   if(epoch!==sourceEpoch){sourceEpoch=epoch;sourceTransforms.clear();ownDrawScreens.clear()}
   drawnTransforms.clear();addedTransforms.clear();flights.length=0
   handFaceInstances.length = 0
+  inspectableTiles.clear()
   if (!reuse) clearDynamicScene()
   dealTweens.length = 0
   meldTweens.length = 0
@@ -700,6 +715,19 @@ function rebuildTableTiles({ reuseInstances = false }: { reuseInstances?: boolea
   }
 
   return { rebuild: rebuildTableTiles, animate, meldTransform, alignMeldBottom, sourceTileRotationOffset,
+    inspect(raycaster: THREE.Raycaster): PublicTileInspection | null {
+      const index = tileInstances.pick(raycaster)
+      return index === null ? null : inspectableTiles.get(index)?.info ?? null
+    },
+    inspectionScreenPoints(camera: THREE.Camera) {
+      camera.updateMatrixWorld()
+      return [...inspectableTiles.values()].map(({ info, instance }) => {
+        const matrix = new THREE.Matrix4()
+        instance.capMesh.getMatrixAt(instance.capIndex, matrix)
+        const point = new THREE.Vector3().setFromMatrixPosition(matrix).applyMatrix4(instance.capMesh.matrixWorld).project(camera)
+        return { ...info, x: (point.x + 1) / 2, y: (1 - point.y) / 2 }
+      })
+    },
     // 相机实验室读取真实实例几何的投影，供 HUD 遮挡验收；正式构建不采集手牌实例。
     handFaceScreenRects(camera: THREE.Camera) {
       camera.updateMatrixWorld()

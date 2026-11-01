@@ -10,6 +10,12 @@ Android 工程与网页共用 Vue / Three.js 源码，不建立会漂移的第�
 
 ## 生成可安装 APK
 
+Windows 可直接双击仓库根目录的 **`构建App.bat`**：自动定位项目、检查 Node.js / JDK 17 / SDK、在缺少前端依赖时按锁文件安装，然后生成正式签名 APK。签名沿用下面说明的 `android/signing.properties` 或环境变量；缺少签名时会明确报错。仅需调试包时运行 `构建App.bat -DebugApk`。
+
+脚本会优先使用已安装的 JDK 17（检查 `JAVA_HOME` 及 Program Files 下的 Java / Eclipse Adoptium / Microsoft 目录），SDK 检查 `ANDROID_HOME`、`ANDROID_SDK_ROOT` 与 `%LOCALAPPDATA%\Android\Sdk`。这些设置只影响本次构建进程，不修改系统环境变量。首次安装依赖或下载 Gradle 需要网络；生成的 APK 普通 AI 单机运行无需网络、账号、电脑或后端服务。
+
+**`构建前端.bat`** 生成普通 Web 版到 `dist`，用于静态网站部署；它与 Android APK 是两个独立产物。网页单机模式也无需游戏后端，联机功能需要配套服务。`启动.bat` 用于本地开发预览。两个构建脚本结束后都会显示结果并等待按键；自动化运行时设置 `MAHJONG_BUILD_NO_PAUSE=1` 可跳过等待，并以退出码判断成功或失败。
+
 准备 Node.js 24、pnpm 10.32.1、JDK 17、Android SDK Platform 35 与 Build Tools 35.0.0。Gradle 8.14 由已提交的 wrapper 自动下载。
 
 ```powershell
@@ -40,7 +46,7 @@ ANDROID_KEY_PASSWORD
 
 SDK 路径、Gradle 缓存、APK/AAB、签名文件、密码配置均在 `.gitignore` 中说明并排除。原生源码、wrapper JAR、资源 SVG、锁文件和 CI 必须提交。
 
-本地交付副本位于 `artifacts/android/mahjong-1.1.0.apk`，同目录的 `SHA256SUMS.txt` 与 `build-info.json` 用于核对文件和源码提交。该目录为生成产物，不提交 Git。将 APK 传到手机后打开，按系统提示允许文件管理器安装应用即可；无需运行本机开发服务器。正式版与 debug 版包名不同，可同时安装。
+构建脚本会自动把 APK 复制到 `artifacts/android/mahjong-<版本号>.apk`（当前正式版为 `mahjong-1.2.0.apk`，`versionCode=3`），并生成同名 `.apk.sha256` 与 `.apk.build-info.json`，记录校验值、版本、源码提交和工作区是否有未提交改动。调试包文件名包含 `-debug`，历史版本保留。该目录为生成产物，不提交 Git。将 APK 传到 Android 11+ 手机上打开，按系统提示允许文件管理器安装应用即可；无需运行本机开发服务器。沿用相同签名可从 1.1.0 / 1.1.1 覆盖升级；正式版与 debug 版包名不同，可同时安装。
 
 ## 验证
 

@@ -98,6 +98,29 @@ try {
   await until(() => evaluate("!document.querySelector('.table-loading, .opening-overlay')"), 'opening transitions finished')
   await screenshot('shandong-table')
   console.log('Shandong table and all assets loaded')
+  // A real OS touch on a non-drawn suited tile must show neighbours even in
+  // WebView 83 (its pointerType may be empty and color-mix is unsupported).
+  const hintTile = "[...document.querySelectorAll('.hand-tile-slot')].find(el => /^[mps][1-9]$/.test(el.dataset.handTile))"
+  await tap(hintTile)
+  await until(() => evaluate("document.querySelector('.tile-unseen-hint') !== null"), 'hand tile inspection')
+  const hintCheck = await evaluate(`(() => {
+    const tile = (${hintTile}).dataset.handTile;
+    const rank = Number(tile[1]);
+    const expected = [rank-1,rank,rank+1].filter(n => n>=1 && n<=9).map(n => tile[0]+n);
+    const panel = document.querySelector('.tile-unseen-hint');
+    const items = [...panel.querySelectorAll('.tile-hint-item')];
+    const rect = panel.getBoundingClientRect();
+    return { expected, actual: items.map(el => el.dataset.tile), counts: items.map(el => Number(el.dataset.remaining)),
+      inside: rect.left >= 0 && rect.top >= 0 && rect.right <= innerWidth && rect.bottom <= innerHeight,
+      background: getComputedStyle(panel).backgroundColor };
+  })()`)
+  if (JSON.stringify(hintCheck.expected) !== JSON.stringify(hintCheck.actual) || !hintCheck.inside
+    || hintCheck.counts.some(n => !Number.isInteger(n) || n < 0 || n > 4)
+    || ['transparent', 'rgba(0, 0, 0, 0)'].includes(hintCheck.background)) {
+    throw new Error(`Invalid native tile inspection: ${JSON.stringify(hintCheck)}`)
+  }
+  await screenshot('hand-neighbours')
+  console.log(`Native hand inspection passed: ${hintCheck.actual.join(',')}`)
   const handBefore = await evaluate("document.querySelectorAll('.hand-tile-slot').length")
   const swipe = await evaluate("(() => {const r=document.querySelector('.hand-tile-slot .mahjong-tile').getBoundingClientRect();return {x:Math.round((r.x+r.width/2)*devicePixelRatio),y:Math.round((r.y+r.height/2)*devicePixelRatio),endY:Math.round((r.y-70)*devicePixelRatio)}})()")
   shell('shell', 'input', 'touchscreen', 'swipe', String(swipe.x), String(swipe.y), String(swipe.x), String(swipe.endY), '220')
@@ -126,7 +149,8 @@ try {
     apkSha256: createHash('sha256').update(await fs.readFile(apkPath)).digest('hex'),
     android: shell('shell','getprop','ro.build.version.release'), api: shell('shell','getprop','ro.build.version.sdk'),
     webview: shell('shell','dumpsys','webviewupdate').split('\n').find(line => line.includes('Current WebView package'))?.trim(),
-    offline: true, landscape: true, shandongOpening: true, touchDiscard: true, flowerDetail: flower, backgroundResume: true, errors }
+    offline: true, landscape: true, shandongOpening: true, handInspection: hintCheck,
+    touchDiscard: true, flowerDetail: flower, backgroundResume: true, errors }
   await fs.writeFile(path.join(output, 'report.json'), JSON.stringify(report, null, 2) + '\n')
   console.log(JSON.stringify(report, null, 2))
 } finally {

@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import FlowerCollection from './FlowerCollection.vue'
+import TileUnseenHint from './TileUnseenHint.vue'
+import { adjacentHandTiles, type PublicTileInspection, type TileHintAnchor } from './tileInspection'
 import { isAndroidApp } from '../../platform/nativeApp'
 import { computed, defineAsyncComponent, nextTick, onBeforeUnmount, ref, shallowRef, watch } from 'vue'
 import MahjongTile from '../MahjongTile.vue'
@@ -428,7 +430,52 @@ watch(() => props.isUserTurn, (value) => { if (!value) waitsOpen.value = false }
 watch(() => props.userKongs, (kongs) => { if (!kongs.length) kongPickerOpen.value = false })
 watch(() => props.actionPrompt, () => { chiPickerOpen.value = false })
 
-const hoveredHandIndex = ref<number | null>(null)
+const inspectedHandIndex = ref<number | null>(null)
+const inspectedPublicTile = ref<PublicTileInspection | null>(null)
+const hintAnchor = ref<TileHintAnchor | null>(null)
+const inspectedTile = computed(() => inspectedPublicTile.value?.tile
+  ?? (inspectedHandIndex.value === null ? null : displayedUserHand.value[inspectedHandIndex.value]))
+const hintItems = computed(() => !inspectedTile.value ? []
+  : (inspectedPublicTile.value ? [inspectedTile.value] : adjacentHandTiles(inspectedTile.value))
+    .map(tile => ({ tile, remaining: getUnseenCount(tile) })))
+const hintSource = computed(() => {
+  const item = inspectedPublicTile.value
+  return item ? `${['本家', '下家', '对家', '上家'][item.playerIndex]}${{ discard: '弃牌', meld: '副露', minglou: '明楼' }[item.source]}` : '手牌'
+})
+
+function dismissTileHint() {
+  inspectedHandIndex.value = null
+  inspectedPublicTile.value = null
+  hintAnchor.value = null
+}
+function inspectHandTile(index: number) {
+  const slot = tableHudElement.value?.querySelectorAll<HTMLElement>('.hand-tile-slot')[index]
+  if (!slot) return
+  const rect = slot.getBoundingClientRect()
+  hintAnchor.value = { left: rect.left, right: rect.right, top: rect.top, bottom: rect.bottom }
+  inspectedPublicTile.value = null
+  inspectedHandIndex.value = index
+}
+function inspectPublicTile(item: PublicTileInspection & { x: number; y: number }) {
+  inspectedHandIndex.value = null
+  inspectedPublicTile.value = item
+  hintAnchor.value = { left: item.x, right: item.x, top: item.y, bottom: item.y }
+}
+function dismissTileHintOnEscape(event: KeyboardEvent) { if (event.key === 'Escape') dismissTileHint() }
+window.addEventListener('keydown', dismissTileHintOnEscape)
+window.addEventListener('resize', dismissTileHint)
+onBeforeUnmount(() => {
+  window.removeEventListener('keydown', dismissTileHintOnEscape)
+  window.removeEventListener('resize', dismissTileHint)
+})
+watch(() => props.selectedIndex, async index => {
+  if (index >= 0) { await nextTick(); inspectHandTile(index) }
+})
+watch(() => displayedUserHand.value.join(','), () => {
+  if (inspectedHandIndex.value !== null) dismissTileHint()
+  lastTouchTap = { index: -1, time: 0 }
+})
+watch(() => [props.roundLabel, props.dealAnimation.serial, props.themeName, props.revealHands], dismissTileHint)
 
 function usesFinePointer() {
   return window.matchMedia('(hover: hover) and (pointer: fine)').matches
@@ -440,7 +487,8 @@ function getUnseenCount(tile: TileType): number {
 }
 
 function handleTileHover(tile: TileType, index: number) {
-  hoveredHandIndex.value = index
+  if (!usesFinePointer()) return
+  inspectHandTile(index)
   if (usesFinePointer() && isTingDiscard(index, tile)) {
     hoveredDiscard.value = tile
     waitsOpen.value = true
@@ -448,20 +496,15 @@ function handleTileHover(tile: TileType, index: number) {
 }
 
 function handleTileLeave(index?: number) {
-  if (index === undefined || hoveredHandIndex.value === index) {
-    hoveredHandIndex.value = null
-  }
+  if (usesFinePointer() && inspectedHandIndex.value === index && props.selectedIndex !== index) dismissTileHint()
   if (usesFinePointer() && hoveredDiscard.value) {
     hoveredDiscard.value = null
     waitsOpen.value = false
   }
 }
 
-function isTileHintVisible(index: number) {
-  return hoveredHandIndex.value === index || props.selectedIndex === index
-}
-
 function beginTileGesture(index: number, event: PointerEvent) {
+  inspectHandTile(index)
   // Older Android WebViews can expose an unknown tool as pointerType=''
   // (including accessibility/automation input). It still carries touch motion.
   if (!['touch', 'pen'].includes(event.pointerType) && !(isAndroidApp && event.pointerType === '')) return
@@ -477,9 +520,9 @@ function finishTileGesture(index: number, event: PointerEvent) {
   const upwardDistance = -(event.clientY - start.y)
   if (upwardDistance >= 28 && upwardDistance > Math.abs(deltaX) * 1.15 && performance.now() - start.startedAt < 700) {
     suppressTileClickUntil = performance.now() + 500
+    dismissTileHint()
     lastTouchTap = { index: -1, time: 0 }
     hoveredDiscard.value = null
-    hoveredHandIndex.value = null
     waitsOpen.value = false
     if (!props.bloodFlow?.seats[props.user.seat].locked || index === props.user.drawnTileIndex) emit('discard', index)
   }
@@ -496,15 +539,15 @@ function handleTileActivation(index: number, event?: PointerEvent) {
   if (now < suppressTileClickUntil) return
   const isTouch = event?.pointerType === 'touch' || event?.pointerType === 'pen' || !usesFinePointer()
   if (!isTouch) {
+    dismissTileHint()
     hoveredDiscard.value = null
-    hoveredHandIndex.value = null
     waitsOpen.value = false
     emit('discard', index)
     return
   }
   if (lastTouchTap.index === index && now - lastTouchTap.time <= 360) {
+    dismissTileHint()
     lastTouchTap = { index: -1, time: 0 }
-    hoveredHandIndex.value = null
     waitsOpen.value = false
     emit('discard', index)
     return
@@ -514,8 +557,9 @@ function handleTileActivation(index: number, event?: PointerEvent) {
 }
 
 function clearMobileSelection(event: PointerEvent) {
-  if (usesFinePointer() || props.selectedIndex < 0 || event.pointerType === 'mouse') return
   const target = event.target as HTMLElement
+  if (!target.closest('.hand-tile-slot')) dismissTileHint()
+  if (usesFinePointer() || props.selectedIndex < 0 || event.pointerType === 'mouse') return
   if (target.closest('.hand-tile-slot, .waiting-tip, .turn-action-row')) return
   emit('clearSelection')
   waitsOpen.value = false
@@ -604,7 +648,10 @@ function onAvatarError(entry: GamePlayer) {
       :blood-flow-own-draw="ownDrawScreen"
       @ready="handleTableReady"
       @load-error="handleTableLoadError"
+      @inspect-tile="inspectPublicTile"
     />
+    <TileUnseenHint v-if="inspectedTile && hintAnchor" :tile="inspectedTile" :items="hintItems"
+      :anchor="hintAnchor" :theme-name="themeName" :source="hintSource" />
     <template v-if="bloodFlow">
       <BloodFlowWinPresentation :cue="bloodFlowCue" :now="presentationNow" :players="players" :theme-name="themeName" :local-seat="user.seat" :compact="compactBloodFlowEffects" />
       <BloodFlowSettlementHost ref="settlementHost" :state="bloodFlow" :players="players" :local-seat="user.seat" :theme-name="themeName"
@@ -753,23 +800,16 @@ function onAvatarError(entry: GamePlayer) {
             'reform-discard': isReformDiscard(index, tile),
             selected: selectedIndex === index,
           }"
-          :title="`${tileName(tile)}：场外未现剩余 ${getUnseenCount(tile)} 张`"
+          :data-hand-tile="tile"
           @mouseenter="handleTileHover(tile, index)" @mouseleave="handleTileLeave(index)"
+          @focusin="inspectHandTile(index)" @focusout="handleTileLeave(index)"
           @pointerdown.stop="beginTileGesture(index, $event)" @pointerup.stop="finishTileGesture(index, $event)" @pointercancel="cancelTileGesture"
         >
           <span class="hand-hit-area" aria-hidden="true"></span>
-          <span v-if="isTingDiscard(index, tile) && !isReformDiscard(index, tile)" class="ting-arrow" :class="{ 'with-unseen': isTileHintVisible(index) }" aria-hidden="true"></span>
-          <span v-if="isReformDiscard(index, tile)" class="ting-arrow reform-arrow" :class="{ 'with-unseen': isTileHintVisible(index) }" aria-hidden="true"></span>
+          <span v-if="isTingDiscard(index, tile) && !isReformDiscard(index, tile)" class="ting-arrow" aria-hidden="true"></span>
+          <span v-if="isReformDiscard(index, tile)" class="ting-arrow reform-arrow" aria-hidden="true"></span>
           <span v-if="isReformDiscard(index, tile)" class="reform-badge" aria-hidden="true">改</span>
           <MahjongTile :tile="tile" :joker-tiles="jokerTiles" :wildcard-tiles="wildcardTiles" :theme-name="themeName" :selected="selectedIndex === index" :drawn="userDrawnIndex === index" :disabled="!isUserTurn || Boolean(((rulesetId === 'shandong' && (user.isBaoTing || user.isMingLou)) || bloodFlow?.seats[user.seat].locked) && index !== userDrawnIndex)" @choose="handleTileActivation(index, $event)" />
-          <span
-            v-if="isTileHintVisible(index)"
-            class="tile-unseen-badge"
-            :class="{ exhausted: getUnseenCount(tile) === 0 }"
-            aria-label="场面未现剩余张数"
-          >
-            剩<em>{{ getUnseenCount(tile) }}</em>张
-          </span>
         </div>
       </div>
     </section>
