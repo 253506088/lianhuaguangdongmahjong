@@ -112,14 +112,24 @@ function onPortraitError(event: Event) {
 .anime-action-burst {
   position: absolute;
   z-index: -1;
-  inset: -18% -24%;
+  top: -18%;
+  right: -24%;
+  bottom: -18%;
+  left: -24%;
   opacity: .66;
   border: 0;
   background:
-    radial-gradient(circle at 42% 54%, color-mix(in srgb, var(--anime-accent, #9e5148) 46%, transparent) 0 3%, transparent 32%),
+    radial-gradient(circle at 42% 54%, var(--anime-accent, #9e5148) 0 3%, transparent 32%),
     conic-gradient(from 12deg at 42% 54%, transparent 0 9%, rgba(133, 224, 241, .42) 10% 11%, transparent 12% 29%, rgba(235, 142, 167, .38) 30% 31%, transparent 32% 100%);
   -webkit-mask-image: radial-gradient(circle at 42% 54%, #000 0 18%, rgba(0,0,0,.72) 35%, transparent 70%);
   mask-image: radial-gradient(circle at 42% 54%, #000 0 18%, rgba(0,0,0,.72) 35%, transparent 70%);
+}
+@supports (color: color-mix(in srgb, #000, #fff)) {
+  .anime-action-burst {
+    background:
+      radial-gradient(circle at 42% 54%, color-mix(in srgb, var(--anime-accent, #9e5148) 46%, transparent) 0 3%, transparent 32%),
+      conic-gradient(from 12deg at 42% 54%, transparent 0 9%, rgba(133, 224, 241, .42) 10% 11%, transparent 12% 29%, rgba(235, 142, 167, .38) 30% 31%, transparent 32% 100%);
+  }
 }
 .anime-action-cue img.base-q-avatar {
   position: absolute;
@@ -161,14 +171,29 @@ function onPortraitError(event: Event) {
   font-weight: 1000;
   line-height: .92;
   letter-spacing: -.08em;
-  paint-order: stroke fill;
   -webkit-text-stroke: clamp(4px, .44vw, 6px) #2d241c;
   text-shadow: 3px 3px 0 rgba(45, 36, 28, .22);
+}
+/* Older WebViews support paint-order only for SVG, so CSS.supports is not a
+   reliable test for HTML text. Paint an unstroked face above both outlines. */
+.anime-action-copy strong::before {
+  content: attr(data-text);
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 1;
+  -webkit-text-stroke: 0;
+  text-shadow: none;
 }
 .anime-action-copy strong::after {
   content: attr(data-text);
   position: absolute;
-  inset: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
   z-index: -1;
   color: transparent;
   -webkit-text-stroke: clamp(8px, .76vw, 12px) var(--anime-accent, #bd5b48);
