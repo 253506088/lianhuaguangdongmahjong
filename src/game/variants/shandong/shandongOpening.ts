@@ -34,7 +34,12 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
     resetLocalPlayers(state, 2000, options.playerSeeds, options.humanPlayerSeed)
   }
 
-  async function start(mode?: MatchType, startOptions: GameStartOptions = {}) {
+  // The WebSocket and VibeHub branches retain separate GamePort contracts.
+  // Keep the shared engine's deterministic restore fields explicit here.
+  async function start(mode?: MatchType, startOptions: GameStartOptions & {
+    dealer?: number
+    scores?: readonly number[]
+  } = {}) {
     options.clearTimers()
     if (mode && MATCH_HANDS[mode]) {
       state.matchType.value = mode
