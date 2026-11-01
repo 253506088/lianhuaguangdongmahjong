@@ -68,6 +68,8 @@ import type { ReplayMatch, ReplayRound } from './game/replay/types'
 
 // 规则面板只在首次打开时加载；牌桌的 Three.js 场景由 GameTableHud 延迟加载。
 const RulesPanel = defineAsyncComponent(() => import('./components/RulesPanel.vue'))
+const NearbyRoom = defineAsyncComponent(() => import('./components/nearby/NearbyRoom.vue'))
+const nearbyOpen = ref(false)
 // 回放视图会拉起 3D 牌桌，按需加载。
 const ReplayViewer = defineAsyncComponent(() => import('./components/replay/ReplayViewer.vue'))
 const robotIconUrl = `${import.meta.env.BASE_URL}img/robot.svg`
@@ -749,7 +751,9 @@ function changeTableTheme(theme: TableThemeName) {
 
 <template>
   <OrientationGate :theme-name="tableThemeName" />
+  <NearbyRoom v-if="nearbyOpen" :theme-name="tableThemeName" @close="nearbyOpen = false" />
   <main
+    v-else
     class="game-app"
     :class="[{ 'is-lobby': showLobby }, themePresentation.typography.headingClass]"
     :data-table-theme="tableThemeName"
@@ -904,6 +908,7 @@ function changeTableTheme(theme: TableThemeName) {
         @leave-match="leaveMatchFromPanel"
         @open-stats="statsOpen = true"
         @open-replay="replayOpen = true"
+        @open-nearby="nearbyOpen = true"
         @open-rules="rulesOpen = true"
         @waku-login="wakuAuth.login"
         @waku-logout="wakuAuth.logout"

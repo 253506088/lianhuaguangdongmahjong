@@ -2,6 +2,7 @@
     <string name="app_name">莲花麻将</string>
     <string name="exit_title">暂时离开牌桌？</string>
     <string name="exit_message">牌局会保留在后台。系统清理应用后，未结束的牌局会丢失。</string>
+    <string name="nearby_exit_message">附近房间会保留，重新打开“附近同桌”可恢复。暂离是否由 AI 代打，以房主设置为准。</string>
     <string name="stay">继续玩</string>
     <string name="leave">返回桌面</string>
     <string name="load_error">游戏加载失败，请重新打开应用。</string>

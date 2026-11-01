@@ -189,6 +189,10 @@ export function createLocalOpeningTimeline(options: LocalOpeningTimelineOptions)
       serial: state.dealAnimation.value.serial + 1,
     }
     state.players.forEach((player) => { player.hand = sortTiles(player.hand) })
+    // The dealer already holds the fourteenth tile, even when another seat's
+    // opening four reds settle the round before beginTurn can mark that draw.
+    const dealer = state.players[state.dealer.value]
+    dealer.drawnTileIndex = dealer.hand.length - 1
     const fourRedWinner = state.players.findIndex((player) => player.redCount >= 4)
     if (fourRedWinner >= 0) return options.endGame(fourRedWinner, { fourRed: true })
     options.announce(`${options.getRoundLabel()} · 开牌`)

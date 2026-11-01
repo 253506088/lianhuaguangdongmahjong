@@ -24,6 +24,8 @@ import {
 import type { ShandongDrawReason } from './shandongTileFlow'
 
 interface ShandongTurnOrchestratorOptions {
+  /** Nearby humans must explicitly act even with a locked hand. */
+  controllerDrivenLockedTurns?: boolean
   state: ShandongGameState
   controllers: ShandongController[]
   drawFor(playerIndex: number, reason?: ShandongDrawReason | boolean): Promise<boolean>
@@ -65,7 +67,7 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
     const isBaoTing = state.baoTingPlayers.value.has(playerIndex)
 
     // 若处于明搂或报听状态：只能自摸胡牌；不胡则必须摸打（打出摸到的那张牌）
-    if (isMingLou || isBaoTing) {
+    if ((isMingLou || isBaoTing) && !options.controllerDrivenLockedTurns) {
       if (playerIndex !== 0) {
         if (canWinOnSelfDraw(player.hand, player.melds, { luanJiang: state.luanJiang.value })) {
           options.announce(`${player.name} 自摸！`, 'gold')

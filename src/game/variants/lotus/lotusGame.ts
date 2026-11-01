@@ -69,6 +69,7 @@ interface UseLotusGameOptions {
   getThemeName?: () => string
   animeFixedTts?: AnimeFixedTtsExecutor
   countdownEnabled?: boolean
+  headless?: boolean
   ruleset?: RuleSet
   /** 对局回放录制钩子（可选；不传时零行为变化）。 */
   recorder?: ReplayRecorderHooks
@@ -96,6 +97,7 @@ export function useLotusGame({
   getThemeName = () => 'jade',
   animeFixedTts,
   countdownEnabled = true,
+  headless = false,
   ruleset = LOTUS_RULESET,
   recorder,
   analysis,
@@ -487,6 +489,7 @@ export function useLotusGame({
   }
 
   const timer = createTimerScheduler({
+    instant: headless,
     controllers,
     stopCountdown: () => countdown?.stop(),
     cancelOpening: () => openingTimeline?.cancel(),

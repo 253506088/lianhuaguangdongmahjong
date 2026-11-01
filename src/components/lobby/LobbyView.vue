@@ -72,6 +72,7 @@ const emit = defineEmits<{
   'update:joinCode': [value: string]
   'update:animeCharacterId': [value: CharacterId]
   startLocal: []
+  openNearby: []
   createRoom: [payload: { llmEnabled: boolean }]
   joinRoom: []
   resumeSession: []
@@ -224,9 +225,10 @@ function toggleWakuDemoAuth() {
         <div class="mode-selector" role="radiogroup" aria-label="游戏模式">
           <button data-action-role="secondary" :class="{ active: gameMode === 'local' }" role="radio" :aria-checked="gameMode === 'local'" @click="$emit('update:gameMode', 'local')"><b>单机对战</b><span>与 AI 同桌</span></button>
           <button v-if="!singlePlayerOnly" data-action-role="secondary" :class="{ active: gameMode === 'remote' }" role="radio" :aria-checked="gameMode === 'remote'" @click="$emit('update:gameMode', 'remote')"><b>联机对战</b><span>创建或加入房间</span></button>
+          <button v-else data-action-role="secondary" data-testid="open-nearby" @click="$emit('openNearby')"><b>附近同桌</b><span>扫码联机 · 缺人补 AI</span></button>
         </div>
         <template v-if="gameMode === 'local'">
-          <p v-if="singlePlayerOnly" class="native-offline-note">离线单机版 · 无需登录。联机功能暂不可用。</p>
+          <p v-if="singlePlayerOnly" class="native-offline-note">单机随时玩 · 朋友同一 Wi-Fi / 热点，扫码即可同桌。</p>
           <GameSettingsSummary
             :match-name="matchOption.name"
             :match-description="matchOption.description"

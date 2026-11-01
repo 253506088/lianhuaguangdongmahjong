@@ -221,6 +221,7 @@ export interface GameStartOptions {
   initialWall?: TileType[]
   /** **固定开局骰子**（两粒）：定时器压缩 / 重跑复现用；不给则随机。 */
   openingDice?: [number, number]
+  openingSecondDice?: [number, number]
   /**
    * **当局庄家**（分析区 P1 §6 的确定性子局重跑）：不给则沿用引擎当前状态（新的一场是 0）。
    *

@@ -71,6 +71,8 @@ interface UseGameOptions {
   animeFixedTts?: AnimeFixedTtsExecutor
   /** 单机对战是否启用回合倒计时（默认开启；模拟测试依赖倒计时自动出牌/过牌） */
   countdownEnabled?: boolean
+  /** Fast deterministic replay for a restored nearby room. */
+  headless?: boolean
   ruleset?: RuleSet
   /** 对局回放录制钩子（可选；不传时零行为变化）。 */
   recorder?: ReplayRecorderHooks
@@ -93,6 +95,7 @@ export function useGame({
   getThemeName = () => 'jade',
   animeFixedTts,
   countdownEnabled = true,
+  headless = false,
   ruleset = DEFAULT_RULESET,
   recorder,
   analysis = null,
@@ -557,6 +560,7 @@ export function useGame({
     : controllers
 
   const scheduler = createLocalTimerScheduler({
+    instant: headless,
     // 分析记录接缝只在接了录制器时才代理；两个分支都由 seatControllers 表达（不接 = 原数组）
     controllers: seatControllers,
     stopCountdown: () => countdown?.stop(),
