@@ -28,6 +28,7 @@ export interface ShandongTurnContext {
   wallCount?: number
   skipDraw?: boolean
   luanJiang?: boolean
+  visibleTiles?: readonly TileType[]
 }
 
 export interface ShandongHuContext {

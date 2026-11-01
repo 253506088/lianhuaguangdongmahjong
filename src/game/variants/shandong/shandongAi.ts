@@ -14,6 +14,8 @@ import {
   type ChiMeld,
 } from './shandongRules'
 import { countTiles } from '../../shared/rules/tileTools'
+import { TILE_TYPES } from '../../core/rules/tiles'
+import { shandongShanten } from './shandongEfficiency'
 
 export type ShandongTurnDecision =
   | { kind: 'win' }
@@ -35,6 +37,8 @@ export interface ShandongTurnContext {
   isBaoTing?: boolean
   wallCount?: number
   luanJiang?: boolean
+  /** 自己手牌、全桌牌河/副露、明搂公开手牌、公开杠头；不含他家暗手或牌墙。 */
+  visibleTiles?: readonly TileType[]
 }
 
 export interface ShandongClaimContext {
@@ -82,38 +86,63 @@ function evaluateTileUtility(tile: TileType, hand: TileType[], luanJiang?: boole
 }
 
 /** 智能选择切牌索引 */
-export function chooseBestDiscardIndex(hand: TileType[], melds: Meld[] = [], luanJiang?: boolean): { index: number; reachesTing: boolean } {
-  // 1. 优先检查打出哪张牌能进入听牌，且听牌张数最多
-  let bestTingIndex = -1
-  let maxWaitCount = -1
+export function chooseBestDiscardIndex(hand: TileType[], melds: Meld[] = [], luanJiang?: boolean, visibleTiles?: readonly TileType[]): { index: number; reachesTing: boolean } {
+  const best = rankDiscardOptions(hand, melds, luanJiang, visibleTiles)[0]
+  // 已知所有听牌均耗尽时不主动锁手，仍可继续改良。
+  return { index: best?.index ?? -1, reachesTing: Boolean(best?.waits.length && best.remaining > 0) }
+}
 
-  for (let i = 0; i < hand.length; i += 1) {
-    const remainingHand = [...hand.slice(0, i), ...hand.slice(i + 1)]
-    const waits = waitingTiles(remainingHand, melds, { luanJiang })
-    if (waits.length > maxWaitCount) {
-      maxWaitCount = waits.length
-      bestTingIndex = i
+export interface ShandongDiscardEvaluation {
+  index: number
+  tile: TileType
+  waits: TileType[]
+  remaining: number
+  shanten: number
+  ukeire: number
+  utility: number
+}
+
+/** 排序结果用于可复现的牌例/基准检查；重复牌只评价一次。 */
+export function rankDiscardOptions(hand: TileType[], melds: Meld[] = [], luanJiang = false, visibleTiles?: readonly TileType[]): ShandongDiscardEvaluation[] {
+  const visible = countTiles([...(visibleTiles ?? [...hand, ...melds.flatMap(meld => meld.tiles)])])
+  const own = countTiles(hand)
+  const remaining = (tile: TileType) => Math.max(0, 4 - Math.max(visible.get(tile) ?? 0, own.get(tile) ?? 0))
+  const seen = new Set<TileType>()
+  const candidates: ShandongDiscardEvaluation[] = []
+  for (let index = 0; index < hand.length; index++) {
+    const tile = hand[index]
+    if (seen.has(tile)) continue
+    seen.add(tile)
+    const after = hand.filter((_, i) => i !== index)
+    const distance = shandongShanten(after, melds, luanJiang)
+    // 先用无癞子结构筛掉不可能听的散手，避免每次弃牌都枚举34种和牌。
+    // 风一色豁免258将，始终交给正式规则确认。
+    const mayWait = distance <= 0 || after.every(tile => !/^[mps]/.test(tile))
+    const waits = mayWait ? waitingTiles(after, melds, { luanJiang }) : []
+    const live = waits.reduce((n, wait) => n + remaining(wait), 0)
+    candidates.push({
+      index, tile, waits, remaining: live,
+      shanten: waits.length ? 0 : Math.max(1, distance),
+      ukeire: live, utility: evaluateTileUtility(tile, hand, luanJiang),
+    })
+  }
+  // 有活听即比较可得张数；无活听时，把死听当作需要改良的一向听。
+  const liveReady = candidates.filter(candidate => candidate.remaining > 0)
+  const pool = liveReady.length ? liveReady : candidates
+  if (!liveReady.length) {
+    const bestDistance = Math.min(...pool.map(candidate => Math.max(1, candidate.shanten)))
+    for (const candidate of pool) {
+      candidate.shanten = Math.max(1, candidate.shanten)
+      if (candidate.shanten !== bestDistance) continue
+      const after = hand.filter((_, index) => index !== candidate.index)
+      for (const tile of TILE_TYPES) {
+        const live = remaining(tile)
+        if (live && shandongShanten([...after, tile], melds, luanJiang) < candidate.shanten) candidate.ukeire += live
+      }
     }
   }
-
-  if (bestTingIndex !== -1 && maxWaitCount > 0) {
-    return { index: bestTingIndex, reachesTing: true }
-  }
-
-  // 2. 未听牌时，打出效用最低的孤张牌（优先切孤风箭、偏张幺九）
-  let lowestUtility = Infinity
-  let worstIndex = hand.length - 1
-
-  for (let i = 0; i < hand.length; i += 1) {
-    const tile = hand[i]
-    const u = evaluateTileUtility(tile, hand, luanJiang)
-    if (u < lowestUtility) {
-      lowestUtility = u
-      worstIndex = i
-    }
-  }
-
-  return { index: worstIndex, reachesTing: false }
+  return pool.sort((a, b) => a.shanten - b.shanten || b.ukeire - a.ukeire
+    || b.waits.length - a.waits.length || a.utility - b.utility || a.index - b.index)
 }
 
 /** AI 自家回合出牌决策 */
@@ -140,7 +169,7 @@ export function decideTurn(ctx: ShandongTurnContext): ShandongTurnDecision {
   }
 
   // 4. 选择最佳切牌
-  const { index, reachesTing } = chooseBestDiscardIndex(ctx.hand, ctx.melds, ctx.luanJiang)
+  const { index, reachesTing } = chooseBestDiscardIndex(ctx.hand, ctx.melds, ctx.luanJiang, ctx.visibleTiles)
 
   // 报听与明楼决策：在山东麻将中，必须报听才能胡牌；AI 听牌时必须报听（或偶尔明楼博加倍）
   let declareMingLou = false

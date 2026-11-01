@@ -118,6 +118,14 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
         wallCount: state.wall.value.length,
         skipDraw: Boolean(turnOptions.skipDraw) && !Boolean(turnOptions.preDrawn),
         luanJiang: state.luanJiang.value,
+        visibleTiles: [
+          ...player.hand,
+          ...state.players.flatMap(other => [
+            ...other.discards, ...other.melds.flatMap(meld => meld.tiles),
+            ...(other.seat !== player.seat && other.isMingLou ? other.hand : []),
+          ]),
+          ...(state.gangHeadTile.value ? [state.gangHeadTile.value] : []),
+        ],
       })
 
       if ((state.phase.value as string) === 'settled' || !decision) return
