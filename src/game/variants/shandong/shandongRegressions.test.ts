@@ -153,4 +153,16 @@ describe('山东麻将规则闭环回归', () => {
     expect(state.result.value).toBeNull(); expect(state.phase.value).toBe('discard')
     expect(state.players.map(p=>p.score)).toEqual([2000,2000,2000,2000])
   })
+
+  it('AI上下文仅含本人和公开牌，不包含他家暗手或未知牌墙',async()=>{
+    const state=setup(); state.players[0].hand=[...BASE,'red']
+    state.players[1].hand=['white']; state.players[1].discards=['p9']
+    state.players[2].hand=['green']; state.players[2].isMingLou=true
+    state.gangHeadTile.value='north'; state.wall.value=['west','north']
+    const c=controller(); const {engine}=harness(state,[c,controller(),controller(),controller()])
+    await engine.beginTurn(0,{skipDraw:true})
+    const visible=c.requestTurn.mock.calls[0][0].visibleTiles!
+    expect(visible).toEqual([...BASE,'red','p9','green','north'])
+    expect(visible).not.toContain('white'); expect(visible).not.toContain('west')
+  })
 })
