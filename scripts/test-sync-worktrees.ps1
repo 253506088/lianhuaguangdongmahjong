@@ -115,17 +115,36 @@ Assert (-not $resurrected) 'master-only blood-flow WS entry resurrected (local)'
 
 $shandong = New-Fixture 'shandong-assembly' $true
 $privateApp = @'
+<script setup lang="ts">
 import { useVibeRemoteGame } from './private-p2p'
 import { useShandongGame } from './game/variants/shandong/shandongGame'
 const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)
 const shandongGame = useShandongGame({
   getAllowChiRule: () => shandongAllowChi.value,
 })
+</script>
+<LobbyView v-model:shandong-allow-chi="shandongAllowChi" />
 <RulesPanel :open="rulesOpen" :variant="selectedRule" @close="rulesOpen = false" />
 <Header :base-score="selectedRule === 'lotus-blood-flow' ? BLOOD_FLOW_CONFIG.basePoints : undefined" />
 '@
 Write-Utf8 (Join-Path $shandong.target 'src/App.vue') $privateApp
-Git $shandong.target @('add', 'src/App.vue') | Out-Null
+$privateLobby = @'
+<script setup lang="ts">
+import RuleVariantPicker from './RuleVariantPicker.vue'
+const privateP2P = 'preserve this lobby'
+interface Props {
+  shandongAllowChi?: boolean
+}
+const emit = defineEmits<{
+  'update:shandongAllowChi': [value: boolean]
+}>()
+</script>
+<template>
+          <button class="start-button">Start</button>
+</template>
+'@
+Write-Utf8 (Join-Path $shandong.target 'src/components/lobby/LobbyView.vue') $privateLobby
+Git $shandong.target @('add', 'src/App.vue', 'src/components/lobby/LobbyView.vue') | Out-Null
 Git $shandong.target @('commit', '-m', 'P2P Shandong assembly') | Out-Null
 Run-Sync $shandong $true 'shandong-wiring'
 $wired = Get-Content -Raw (Join-Path $shandong.target 'src/App.vue')
@@ -134,10 +153,20 @@ Assert ($wired.Contains('recorder: replay.hooks')) 'Shandong recorder missing'
 Assert ($wired.Contains('ref<RuleVariant>(DEFAULT_RULE_VARIANT)')) 'Shandong startup preference missing'
 Assert ($wired.Contains(':shandong-jiang="shandongJiang"')) 'Rules configuration missing'
 Assert ($wired.Contains("selectedRule === 'shandong' ? SHANDONG_BASE_SCORE")) 'Shandong base score missing'
+Assert ($wired.StartsWith('<script setup')) 'Mode import escaped the Vue script block'
+Assert ($wired.Contains('getAiMode: () => shandongAiMode.value')) 'AI mode engine binding missing'
+Assert ($wired.Contains('v-model:shandong-ai-mode="shandongAiMode"')) 'AI mode lobby binding missing'
+$lobbyWired = Get-Content -Raw (Join-Path $shandong.target 'src/components/lobby/LobbyView.vue')
+Assert ($lobbyWired.Contains("const privateP2P = 'preserve this lobby'")) 'Private lobby assembly changed'
+Assert ($lobbyWired.Contains('<ShandongAiModePicker')) 'AI mode picker missing'
+Assert ($lobbyWired.Contains("'update:shandongAiMode': [value: ShandongAiMode]")) 'AI mode change event missing'
 Write-Utf8 (Join-Path $shandong.repo 'shared.txt') 'another shared change'
 Git $shandong.repo @('add', 'shared.txt') | Out-Null
 Git $shandong.repo @('commit', '-m', 'second sync') | Out-Null
 Run-Sync $shandong $true 'shandong-wiring-twice'
 $twice = Get-Content -Raw (Join-Path $shandong.target 'src/App.vue')
 Assert ([regex]::Matches($twice,'recorder: replay.hooks').Count -eq 1) 'Repeated recorder injection'
+Assert ([regex]::Matches($twice,'const shandongAiMode =').Count -eq 1) 'Repeated AI mode state injection'
+$lobbyTwice = Get-Content -Raw (Join-Path $shandong.target 'src/components/lobby/LobbyView.vue')
+Assert ([regex]::Matches($lobbyTwice,'<ShandongAiModePicker').Count -eq 1) 'Repeated AI mode picker injection'
 Write-Host "PASS: dirty master/target, linked worktree, spaces, keep restoration, WS deletion, no-op, local fallback. Evidence: $testRoot"

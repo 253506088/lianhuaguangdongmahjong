@@ -14,6 +14,7 @@ import { displayImageSrc } from '../../game/core/presentation/imagePreload'
 import { themePresentationByName, themePresentationCssVariables } from '../../theme/themePresentation'
 import type { ReplayMatch, ReplayRound } from '../../game/replay/types'
 import type { TileType } from '../../game/core/contracts/types'
+import { shandongAiModeLabel } from '../../game/variants/shandong/shandongAiMode'
 
 const props = defineProps<{ match: ReplayMatch; rounds: ReplayRound[] }>()
 const emit = defineEmits<{ close: [] }>()
@@ -127,6 +128,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
         <strong>{{ match.rulesetName }}</strong>
         <span>{{ match.matchName }} · {{ round?.roundLabel ?? '' }}</span>
         <span v-if="round?.shandong">{{ round.shandong.jiang === 'luan' ? '乱将' : '258掌将' }} · {{ round.shandong.allowChi ? '可吃' : '不可吃' }}</span>
+        <span v-if="round?.shandong?.aiMode">{{ shandongAiModeLabel(round.shandong.aiMode) }}</span>
         <i v-if="match.status === 'finished'" class="replay-rank" :class="`rank-${match.myRank}`">
           {{ formatRank(match.myRank) }}
         </i>

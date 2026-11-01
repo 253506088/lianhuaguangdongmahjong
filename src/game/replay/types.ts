@@ -6,6 +6,7 @@ import type { RoundResult } from '../core/contracts/gamePort'
 import type { GamePlayer, MatchType, Meld, TableActionType, TileType } from '../core/contracts/types'
 import type { RuleVariant } from '../core/rules/ruleVariants'
 import type { TableThemeName } from '../../theme/themeIdentity'
+import type { ShandongAiMode } from '../variants/shandong/shandongAiMode'
 
 /** v2 增加山东声明事件与杠头/规则快照；v1 记录继续兼容读取。 */
 export const REPLAY_SCHEMA_VERSION = 2
@@ -25,7 +26,12 @@ export interface ReplayPlayer {
 
 export type ReplayStepKind = 'draw' | 'discard' | 'meld' | 'win' | 'declaration'
 export type ReplayDeclaration = 'bao-ting' | 'ming-lou'
-export interface ReplayShandongRules { jiang: '258' | 'luan'; allowChi: boolean }
+export interface ReplayShandongRules {
+  jiang: '258' | 'luan'
+  allowChi: boolean
+  /** 旧牌谱没有记录策略，不能据此推断为经典版或牌效版。 */
+  aiMode?: ShandongAiMode
+}
 
 export type ReplayMeldKind =
   | 'peng' | 'chi'

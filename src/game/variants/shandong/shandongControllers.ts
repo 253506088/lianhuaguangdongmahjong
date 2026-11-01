@@ -11,6 +11,7 @@ import {
   type ShandongTurnDecision,
 } from './shandongAi'
 import { createPendingAction } from '../../shared/runtime/pendingAction'
+import type { ShandongAiMode } from './shandongAiMode'
 
 export type { ShandongClaimAction }
 
@@ -21,6 +22,7 @@ export type ShandongTurnAction =
   | { kind: 'discard'; handIndex: number; declareMingLou?: boolean; declareBaoTing?: boolean }
 
 export interface ShandongTurnContext {
+  aiMode?: ShandongAiMode
   hand: TileType[]
   melds: Meld[]
   isMingLou?: boolean

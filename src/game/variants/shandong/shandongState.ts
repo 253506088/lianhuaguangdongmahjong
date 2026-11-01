@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 import type { TileType } from '../../core/contracts/types'
 import { createLocalGameState } from '../../core/local/localGameState'
+import { DEFAULT_SHANDONG_AI_MODE, type ShandongAiMode } from './shandongAiMode'
 
 export interface ShandongEndGameOptions {
   winTile?: TileType
@@ -18,6 +19,8 @@ export function createShandongGameState() {
   const base = createLocalGameState()
   return {
     ...base,
+    /** 开场时固定的电脑策略，同场续局不受大厅偏好变化影响。 */
+    aiMode: ref<ShandongAiMode>(DEFAULT_SHANDONG_AI_MODE),
     /** 明搂状态的玩家座位集合 */
     mingLouPlayers: ref<Set<number>>(new Set()),
     /** 报听状态的玩家座位集合 */

@@ -15,6 +15,7 @@ import { useGame } from './game/variants/guangma/game'
 import { useLotusGame } from './game/variants/lotus/lotusGame'
 import { useBloodFlowGame } from './game/variants/lotus/bloodFlow/useBloodFlowGame'
 import { useShandongGame } from './game/variants/shandong/shandongGame'
+import { readShandongAiModePreference, saveShandongAiModePreference, type ShandongAiMode } from './game/variants/shandong/shandongAiMode'
 import { SHANDONG_BASE_SCORE } from './game/variants/shandong/shandongRules'
 import { bloodFlowEnabled } from './game/variants/lotus/bloodFlow/availability'
 import { BLOOD_FLOW_CONFIG } from './game/variants/lotus/bloodFlow/config'
@@ -261,7 +262,10 @@ const bloodFlowGame = useBloodFlowGame({ playSound: playEffect, playSoundAndWait
   humanPlayerSeed: localHumanSeed, aiPlayerSeeds: lotusLlmSeeds, recorder: replay.hooks,
   // AI 分析记录：引擎拿到的是一个稳定代理（换场只换内部录制器）；关闭时为 null，零成本。
   analysis: analysis.port })
+const shandongAiMode = ref<ShandongAiMode>(readShandongAiModePreference())
+watch(shandongAiMode, value => saveShandongAiModePreference(value))
 const shandongGame = useShandongGame({
+  getAiMode: () => shandongAiMode.value,
   recorder: replay.hooks,
   playSound: playEffect,
   playSoundAndWait: playEffectAndWait,
@@ -722,6 +726,7 @@ const themeLockReason = computed(() => (
           v-model:selected-rule="selectedRule"
           v-model:shandong-jiang="shandongJiang"
           v-model:shandong-allow-chi="shandongAllowChi"
+          v-model:shandong-ai-mode="shandongAiMode"
           v-model:nickname-input="nicknameInput"
           v-model:join-code="joinCode"
           v-model:anime-character-id="animeCharacterId"

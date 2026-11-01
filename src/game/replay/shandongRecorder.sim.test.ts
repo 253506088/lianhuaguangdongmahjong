@@ -29,11 +29,11 @@ function record() {
 }
 
 describe('山东引擎录制与回放', () => {
-  it.each(['258','luan'] as const)('%s：整场事件、144张牌、规则设置、声明、分数及导出导入闭环', async jiang => {
+  it.each((['258','luan'] as const).flatMap(jiang => (['classic','efficiency'] as const).map(aiMode => ({jiang,aiMode}))))('$jiang / $aiMode：整场事件、144张牌、规则设置、声明、分数及导出导入闭环', async ({jiang,aiMode}) => {
     timers()
     const {recorder,saved}=record()
     const game=useShandongGame({recorder:recorder.hooks,headless:true,controllerDrivenLockedTurns:true,
-      getJiangRule:()=>jiang,getAllowChiRule:()=>jiang==='258',
+      getJiangRule:()=>jiang,getAllowChiRule:()=>jiang==='258',getAiMode:()=>aiMode,
       controllers:Array.from({length:4},()=>new ShandongAiController(0))})
     await game.startGame('east')
     let iterations=0
@@ -57,7 +57,7 @@ describe('山东引擎录制与回放', () => {
     expect(saved.flatMap(r=>r.steps).some(s=>s.t==='declaration')).toBe(true)
     for(const round of saved) {
       expect(round.jokerTiles).toEqual([])
-      expect(round.shandong).toEqual({jiang,allowChi:jiang==='258'})
+      expect(round.shandong).toEqual({jiang,allowChi:jiang==='258',aiMode})
       expect([...round.initialWall!].sort()).toEqual(createShandongWall().sort())
       expect(round.final!.scores.reduce((a,b)=>a+b,0)).toBe(8000)
       const frames=buildReplayFrames(match,round,{revealAll:false})

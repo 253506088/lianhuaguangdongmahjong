@@ -4,6 +4,7 @@
 
 - [Android 安装、构建、正式签名与验证](docs/android.md)
 - [附近同桌：使用方法、重连与实现](docs/nearby-rooms.md)
+- [山东麻将：开局前选择经典或牌效 AI](docs/shandong-ai-modes.md)
 - [如何向原项目提交 PR、如何同步上游更新](docs/fork-upstream.md)
 - [花牌素材来源及授权](assets-src/flowers/README.md)
 

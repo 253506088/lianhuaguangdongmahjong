@@ -4,7 +4,8 @@ import { expect, test } from '@playwright/test'
 for (const screen of [{name:'desktop',width:1280,height:720},{name:'phone',width:915,height:412}]) {
   test.describe(screen.name, () => {
   test.use({ hasTouch: screen.name === 'phone', isMobile: screen.name === 'phone' })
-  test(`山东默认入口、结算与真实录制回放：${screen.name}`, async ({page},testInfo) => {
+  for (const aiMode of ['classic', 'efficiency'] as const) {
+  test(`山东默认入口、AI模式、结算与真实录制回放：${screen.name} ${aiMode}`, async ({page},testInfo) => {
     test.setTimeout(90000)
     await page.setViewportSize(screen)
     await page.addInitScript(() => {
@@ -16,10 +17,17 @@ for (const screen of [{name:'desktop',width:1280,height:720},{name:'phone',width
     page.on('pageerror',error=>errors.push(error.message))
     await page.goto('/')
     await expect(page.locator('.start-button')).toContainText('山东麻将')
+    const picker = page.getByRole('combobox', {name: '山东麻将 AI 模式', exact: true})
+    await expect(picker).toHaveValue('efficiency')
+    await picker.selectOption(aiMode)
+    await page.reload()
+    await expect(picker).toHaveValue(aiMode)
+    await page.screenshot({path: testInfo.outputPath('ai-mode-picker.png')})
     await page.locator('.start-button').click()
     await expect(page.locator('.round-settlement')).toBeVisible({timeout:30000})
     await expect(page.locator('.base-score-badge')).toContainText('10')
     await expect(page.locator('.round-settlement')).toContainText('天胡')
+    await expect(picker).toHaveCount(0)
     await page.getByRole('button',{name:'查看牌桌',exact:true}).click()
     await page.getByRole('button',{name:'退出对局',exact:true}).click()
     await page.getByTestId('open-replay').click()
@@ -27,6 +35,7 @@ for (const screen of [{name:'desktop',width:1280,height:720},{name:'phone',width
     await page.getByTestId('replay-list-rows').getByRole('button',{name:'查看',exact:true}).first().click()
     await expect(page.getByTestId('replay-viewer')).toBeVisible()
     await expect(page.locator('.replay-title')).toContainText('258掌将')
+    await expect(page.locator('.replay-title')).toContainText(aiMode === 'classic' ? '经典 AI（旧版）' : '牌效 AI（优化版）')
     await expect(page.locator('canvas.mahjong-scene')).toBeVisible()
     await expect(page.locator('.replay-viewer .table-loading')).toHaveCount(0,{timeout:30000})
     await page.keyboard.press('End')
@@ -34,5 +43,6 @@ for (const screen of [{name:'desktop',width:1280,height:720},{name:'phone',width
     await page.screenshot({path:testInfo.outputPath('shandong-replay.png')})
     expect(errors).toEqual([])
   })
+  }
   })
 }

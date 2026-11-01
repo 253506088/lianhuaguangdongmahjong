@@ -1,5 +1,6 @@
 import type { RuleVariant } from '../core/rules/ruleVariants'
 import type { TileType } from '../core/contracts/types'
+import { DEFAULT_SHANDONG_AI_MODE, isShandongAiMode, type ShandongAiMode } from '../variants/shandong/shandongAiMode'
 
 export const NEARBY_VERSION = 1
 export interface NearbySettings {
@@ -7,9 +8,11 @@ export interface NearbySettings {
   takeover: boolean
   jiang: '258' | 'luan'
   chi: boolean
+  /** 旧房间存档可缺省，沿用增加此设置前的牌效版。 */
+  aiMode?: ShandongAiMode
 }
 export const DEFAULT_NEARBY_SETTINGS: NearbySettings = {
-  rule: 'shandong', takeover: false, jiang: '258', chi: true,
+  rule: 'shandong', takeover: false, jiang: '258', chi: true, aiMode: DEFAULT_SHANDONG_AI_MODE,
 }
 export interface Invitation {
   v: 1
@@ -59,6 +62,7 @@ export function validSettings(value: unknown): value is NearbySettings {
   const s = value as NearbySettings
   return !!s && ['lotus-classic', 'lotus-legacy', 'lotus-blood-flow', 'shandong'].includes(s.rule)
     && typeof s.takeover === 'boolean' && ['258', 'luan'].includes(s.jiang) && typeof s.chi === 'boolean'
+    && (s.aiMode === undefined || isShandongAiMode(s.aiMode))
 }
 export function privateAddress(host: string) {
   if (typeof host !== 'string') return false

@@ -111,6 +111,7 @@ export function createShandongTurnOrchestrator(options: ShandongTurnOrchestrator
     // 控制器给出的是意图；在引擎边界再次验证，拒绝后继续等该玩家操作。
     while (true) {
       decision = await controllers[playerIndex].requestTurn({
+        aiMode: state.aiMode.value,
         hand: player.hand,
         melds: player.melds,
         isMingLou,

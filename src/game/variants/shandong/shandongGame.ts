@@ -9,6 +9,7 @@ import { createTimerScheduler } from '../../shared/runtime/timerScheduler'
 import type { PlayerSeed } from '../../shared/runtime/localOpening'
 import { tileName } from '../../core/rules/tiles'
 import { ensureTailNotFlower, SHANDONG_RULESET } from './shandongRules'
+import { DEFAULT_SHANDONG_AI_MODE, normalizeShandongAiMode, type ShandongAiMode } from './shandongAiMode'
 import type { RuleSet } from '../../core/rules/ruleset'
 import { createShandongGameState, type ShandongEndGameOptions } from './shandongState'
 import { createShandongSelectors } from './shandongSelectors'
@@ -36,6 +37,7 @@ const ANIME_FIXED_ACTION_AUDIO_FILES: ReadonlySet<string> = new Set(
 )
 
 interface UseShandongGameOptions {
+  getAiMode?: () => ShandongAiMode
   recorder?: ReplayRecorderHooks
   playSound?: (name: string, volume?: number, onFinish?: () => void) => unknown
   playSoundAndWait?: (name: string, volume?: number) => Promise<void>
@@ -68,6 +70,7 @@ export function useShandongGame({
   animeFixedTts,
   getJiangRule = () => '258',
   getAllowChiRule = () => true,
+  getAiMode = () => DEFAULT_SHANDONG_AI_MODE,
   recorder,
 }: UseShandongGameOptions = {}) {
   const sound = headless ? () => {} : playSound
@@ -106,6 +109,7 @@ export function useShandongGame({
   }
 
   const state = createShandongGameState()
+  state.aiMode.value = normalizeShandongAiMode(getAiMode())
   state.luanJiang.value = getJiangRule() === 'luan'
   state.allowChi.value = getAllowChiRule() !== false
   const selectors = createShandongSelectors(state, ruleset)
@@ -116,7 +120,7 @@ export function useShandongGame({
     honba: state.honba.value, matchType: state.matchType.value,
     diceValues: state.diceValues.value, diceThrowerIndex: state.diceThrowerIndex.value,
     jokerTiles: [], wildcardTiles: [], initialWall, gangHeadTile: state.gangHeadTile.value,
-    shandong: { jiang: state.luanJiang.value ? 'luan' : '258', allowChi: state.allowChi.value },
+    shandong: { jiang: state.luanJiang.value ? 'luan' : '258', allowChi: state.allowChi.value, aiMode: state.aiMode.value },
   })
   const onDeclaration = (seat: number, kind: ReplayDeclaration) => recorder?.declaration?.({ seat, kind }, replayFrame())
 
@@ -353,6 +357,7 @@ export function useShandongGame({
   }
 
   function startGame(mode?: MatchType, options: GameStartOptions = {}) {
+    if (mode || state.phase.value === 'lobby') state.aiMode.value = normalizeShandongAiMode(getAiMode())
     playerActions?.resetDeclaration()
     state.luanJiang.value = getJiangRule() === 'luan'
     state.allowChi.value = getAllowChiRule() !== false
