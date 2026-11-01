@@ -664,10 +664,10 @@ button { font: inherit; }
   justify-content: center;
   padding: 2px 7px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--theme-panel, #0e2018) 92%, #000);
-  border: 1px solid color-mix(in srgb, var(--theme-accent, #f4cb63) 78%, transparent);
+  background: var(--theme-panel, #0e2018);
+  border: 1px solid var(--theme-accent, #f4cb63);
   color: var(--theme-accent-text, #fff4d0);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), 0 0 8px color-mix(in srgb, var(--theme-accent, #f4cb63) 30%, transparent);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
   font-size: clamp(10px, 1.05vw, 12px);
   font-weight: 700;
   line-height: 1.2;
@@ -692,7 +692,19 @@ button { font: inherit; }
   transform: translateX(-50%);
   border-width: 4px;
   border-style: solid;
-  border-color: color-mix(in srgb, var(--theme-accent, #f4cb63) 78%, transparent) transparent transparent transparent;
+  border-color: var(--theme-accent, #f4cb63) transparent transparent transparent;
+}
+/* WebView 83 cannot resolve color-mix(), including values containing var().
+   Keep the opaque bubble and triangle above; enhance them only when supported. */
+@supports (color: color-mix(in srgb, #000, #fff)) {
+  .tile-unseen-badge {
+    background: color-mix(in srgb, var(--theme-panel, #0e2018) 92%, #000);
+    border-color: color-mix(in srgb, var(--theme-accent, #f4cb63) 78%, transparent);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), 0 0 8px color-mix(in srgb, var(--theme-accent, #f4cb63) 30%, transparent);
+  }
+  .tile-unseen-badge::after {
+    border-color: color-mix(in srgb, var(--theme-accent, #f4cb63) 78%, transparent) transparent transparent transparent;
+  }
 }
 .tile-unseen-badge.exhausted {
   background: linear-gradient(135deg, rgba(42, 15, 15, 0.96), rgba(22, 6, 6, 0.98));
