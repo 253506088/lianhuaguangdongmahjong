@@ -4,8 +4,9 @@ import { BASE_SCORE } from '../game/core/rules/rules'
 import { DISCLAIMER_SECTIONS, DISCLAIMER_TITLE } from '../content/disclaimer'
 import type { RuleVariant } from '../game/core/rules/ruleVariants'
 import { BLOOD_FLOW_CONFIG } from '../game/variants/lotus/bloodFlow/config'
+import { SHANDONG_BASE_SCORE } from '../game/variants/shandong/shandongRules'
 
-const props = defineProps<{ open: boolean; variant?: RuleVariant }>()
+const props = defineProps<{ open: boolean; variant?: RuleVariant; shandongJiang?: '258' | 'luan'; shandongAllowChi?: boolean }>()
 defineEmits(['close'])
 
 const legacyPaymentExamples = [
@@ -36,9 +37,12 @@ const rules = computed(() => {
   if (props.variant === 'shandong') {
     return [
       ['多端兼容', '电脑端：鼠标单击出牌、移动端：手机双击出牌或上滑出牌'],
-      ['144张牌', '万筒条108张 + 风字牌28张 + 春夏秋冬梅兰竹菊8张花牌。4人对局，可配置是否允许吃牌（允许吃/不可吃，吃牌仅限下家）、可碰、可杠。'],
+      ['144张牌', `万筒条108张 + 风字牌28张 + 春夏秋冬梅兰竹菊8张花牌。4人对局，${props.shandongAllowChi === false ? '不可吃牌' : '允许吃牌（仅限下家）'}、可碰、可杠。`],
       ['单响截胡', '可自摸或点炮胡牌。不能一炮多响，多人可胡时按出牌者逆时针距离最近者截胡。'],
-      ['258掌将', '除特殊牌型（花胡、风一色、将一色、十三不靠、十三幺）外，所有牌型（平胡、碰碰胡、混一色、清一色、七对、一条龙、大吊车等）必须有 2、5、8 做将对。'],
+      props.shandongJiang === 'luan'
+        ? ['乱将', '当前使用乱将：普通胡牌的将对可由任意牌组成，七对无需包含258对子。']
+        : ['258掌将', '除特殊牌型（花胡、风一色、将一色、十三不靠、十三幺）外，所有牌型（平胡、碰碰胡、混一色、清一色、七对、一条龙、大吊车等）必须有 2、5、8 做将对。'],
+      ['天地胡与海底', '庄家起手成胡为天胡；庄家未开杠的首张弃牌使闲家成胡为地胡，均无需报听且必胡。天胡固定30倍，地胡固定25倍，不计花分，三家各付一份。最后一张可正常摸取的牌（不含保留杠头）自摸为海底捞月，补花延续正常摸牌，杠后补牌不算海底。'],
       ['报听与明搂', '听牌后需报听方可胡牌（允许点炮与自摸）。报听后手牌锁定；报听后亦可声明明搂亮明手牌以博自摸番数翻倍（×2，明搂后不可点炮，纯自摸）。明搂输家付分也翻倍。'],
       ['过圈限制', '过胡过圈：放弃点炮后在下次摸牌前不可点炮胡；过碰过圈：同一圈放弃碰后在下次摸牌前不可碰同一张牌。'],
       ['花分计算', '仅胡牌玩家计花分：底分固定1花、花牌1花/个、字明刻/暗刻1花/个、数牌明杠/补杠1花/个、数牌暗杠2花/个、字明杠/补杠2花/个、字暗杠3花/个。'],
@@ -87,7 +91,7 @@ const rules = computed(() => {
 
 const panelTitle = computed(() => props.variant === 'shandong' ? '山东麻将玩法' : props.variant === 'lotus-blood-flow' ? '莲花麻将·血流玩法' : props.variant === 'lotus-legacy' ? '莲花麻将玩法' : '莲花广麻玩法')
 const baseNote = computed(() => props.variant === 'shandong'
-  ? '基础分 100 分 · 胡牌分 = 花分 × 番型倍数 × 底分 · 天地胡固定倍数必胡'
+  ? `基础分 ${SHANDONG_BASE_SCORE} 分 · 胡牌分 = 花分 × 番型倍数 × 底分 · 天地胡固定倍数必胡`
   : props.variant === 'lotus-blood-flow'
   ? `底分 ${BLOOD_FLOW_CONFIG.basePoints} · 单家每次最多 ${BLOOD_FLOW_CONFIG.basePoints * BLOOD_FLOW_CONFIG.maxMultiplierPerPayer} 分 · 牌墙耗尽结束本局`
   : props.variant === 'lotus-legacy'

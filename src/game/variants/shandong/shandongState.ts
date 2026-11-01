@@ -28,6 +28,8 @@ export function createShandongGameState() {
     passedPengTiles: ref<Map<number, Set<TileType>>>(new Map()),
     /** 本局是否尚未打出第一张牌（地胡判定窗口） */
     roundFirstDiscard: ref(false),
+    /** 正常摸牌（包括其补花）取尽可摸牌时的赢家座位；杠头独立保留。 */
+    lastNormalDrawPlayer: ref<number | null>(null),
     /** 是否为乱将（任意将）规则 */
     luanJiang: ref(false),
     /** 是否允许吃牌 */

@@ -32,6 +32,9 @@ coverage
 test-results/
 playwright-report/
 tmp/
+# tmp/ 包含山东审查探针、AI基准原始数据、调试牌谱和临时提交说明。
+# 正式回归测试提交到 src/ 或 tests/，可复现的验收结论提交到 docs/。
+# 不忽略通用 *.json：源码规则、固定测试牌墙和构建配置仍须入库。
 
 # nyc test coverage
 .nyc_output

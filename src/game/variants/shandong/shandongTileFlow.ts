@@ -19,6 +19,8 @@ interface ShandongTileFlowOptions {
   shouldAnnounceDiscard?: (playerIndex: number, player: GamePlayer) => boolean
   wait(ms: number): Promise<void>
   routeDiscard(from: number, tile: TileType): void
+  onDraw?(seat: number, tile: TileType, reason: ShandongDrawReason): void
+  onDiscard?(seat: number, tile: TileType, id: number): void
 }
 
 export function createShandongTileFlow(options: ShandongTileFlowOptions) {
@@ -28,7 +30,8 @@ export function createShandongTileFlow(options: ShandongTileFlowOptions) {
    * 摸牌并处理花牌补花：
    * 抓到花牌立即亮出（加入 melds of type flower），并在杠头前补摸一张（绝不摸走或改变公开的杠头），直到手里没有花牌为止。
    */
-  async function drawFor(playerIndex: number, reason: ShandongDrawReason | boolean = 'normal'): Promise<boolean> {
+  async function drawFor(playerIndex: number, reason: ShandongDrawReason | boolean = 'normal', normalDraw = reason === 'normal' || reason === false): Promise<boolean> {
+    state.lastNormalDrawPlayer.value = null
     if (state.wall.value.length === 0) {
       options.endDraw()
       return false
@@ -46,6 +49,7 @@ export function createShandongTileFlow(options: ShandongTileFlowOptions) {
     // 检查是否为花牌
     if (isFlowerTile(tile)) {
       player.melds.push({ type: 'flower', tile, tiles: [tile] })
+      options.onDraw?.(playerIndex, tile, reason === true ? 'kong' : reason === false ? 'normal' : reason)
       options.playSound('give.mp3', 0.7)
       await options.wait(200)
 
@@ -58,7 +62,7 @@ export function createShandongTileFlow(options: ShandongTileFlowOptions) {
 
       if (state.phase.value === 'settled') return false
       // 补花摸牌：从杠头前补摸一张（绝不摸走或改变公开的杠头）
-      return drawFor(playerIndex, 'flower')
+      return drawFor(playerIndex, 'flower', normalDraw)
     }
 
     // 摸到正常数牌/字牌：过胡解圈、过碰解圈
@@ -67,10 +71,12 @@ export function createShandongTileFlow(options: ShandongTileFlowOptions) {
 
     player.hand.push(tile)
     player.drawnTileIndex = player.hand.length - 1
+    state.lastNormalDrawPlayer.value = normalDraw && state.wall.value.length <= 1 ? playerIndex : null
     options.playSound('give.mp3', 0.7)
     if (playerIndex === 0) {
       state.userDrewThisTurn.value = true
     }
+    options.onDraw?.(playerIndex, tile, reason === true ? 'kong' : reason === false ? 'normal' : reason)
     return true
   }
 
@@ -91,6 +97,7 @@ export function createShandongTileFlow(options: ShandongTileFlowOptions) {
       from: playerIndex,
       id: Date.now(),
     }
+    options.onDiscard?.(playerIndex, tile, state.lastDiscard.value.id)
 
     // 播放实体打牌声（啪）与牌名语音播报
     options.playSound('dapai.mp3', 0.8)

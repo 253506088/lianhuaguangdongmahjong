@@ -192,6 +192,28 @@ try {
   git checkout master -- .gitignore scripts/sync-master-to-vibehub.ps1
   if ($LASTEXITCODE -ne 0) { throw 'git checkout workflow files failed' }
 
+  # App.vue remains P2P-owned. Apply only these shared Shandong assembly lines;
+  # never copy the master App or merge its WebSocket/lobby wiring into vibehub.
+  $appPath = Join-Path (Get-Location) 'src/App.vue'
+  $appText = [IO.File]::ReadAllText($appPath)
+  if ($appText.Contains('const shandongGame = useShandongGame({')) {
+    $appText = $appText.Replace('const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)', 'const selectedRule = ref<RuleVariant>(DEFAULT_RULE_VARIANT)')
+    $shandongCall = [regex]::Match($appText, '(?s)const shandongGame = useShandongGame\(\{(.*?)\r?\n\}\)')
+    if (-not $shandongCall.Success) { throw 'Cannot locate the Shandong App assembly block' }
+    if (-not $shandongCall.Groups[1].Value.Contains('recorder:')) {
+      $appText = $appText.Replace('const shandongGame = useShandongGame({', "const shandongGame = useShandongGame({`n  recorder: replay.hooks,")
+    }
+    if (-not $appText.Contains('import { SHANDONG_BASE_SCORE }')) {
+      $appText = $appText.Replace("import { useShandongGame } from './game/variants/shandong/shandongGame'", "import { useShandongGame } from './game/variants/shandong/shandongGame'`nimport { SHANDONG_BASE_SCORE } from './game/variants/shandong/shandongRules'")
+    }
+    $appText = $appText.Replace(':base-score="selectedRule === ''lotus-blood-flow'' ? BLOOD_FLOW_CONFIG.basePoints : undefined"', ':base-score="selectedRule === ''shandong'' ? SHANDONG_BASE_SCORE : selectedRule === ''lotus-blood-flow'' ? BLOOD_FLOW_CONFIG.basePoints : undefined"')
+    $appText = $appText.Replace('<RulesPanel :open="rulesOpen" :variant="selectedRule" @close=', '<RulesPanel :open="rulesOpen" :variant="selectedRule" :shandong-jiang="shandongJiang" :shandong-allow-chi="shandongAllowChi" @close=')
+    $appText = $appText.Replace('@quit="quitMatch"', '@quit="gameMode === ''local'' ? returnToLobby() : quitMatch()"')
+    [IO.File]::WriteAllText($appPath, $appText, [Text.UTF8Encoding]::new($false))
+    git add -- src/App.vue
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot stage shared Shandong App wiring' }
+  }
+
   # Master-only WebSocket files that vibehub does not use（定义见上方）：合并后若仍存在则移除。
   # 用索引中的实际文件列表清理，而不是 Test-Path 目录。未提交 merge 里的 staged add
   # 可能让目录存在但普通路径展开漏掉新文件（如 authApi.ts），最终留下悬空 import。

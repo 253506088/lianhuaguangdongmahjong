@@ -69,7 +69,7 @@ export function useReplayPlayer(options: UseReplayPlayerOptions): ReplayPlayer {
   const atEnd = computed(() => frameIndex.value >= frames.value.length - 1)
   /** 鸣牌/和牌节点（牌谱里的"重事件"）：跳转以它们为锚点，避免逐帧翻找。 */
   const actionFrames = computed(() => frames.value
-    .filter((item) => item.step && (item.step.t === 'meld' || item.step.t === 'win'))
+    .filter((item) => item.step && (item.step.t === 'meld' || item.step.t === 'win' || item.step.t === 'declaration'))
     .map((item) => item.index))
 
   let timer: number | null = null

@@ -1,5 +1,5 @@
 // 山东麻将结算时间线：花分 × 番型倍数 × 底分、明搂翻倍、点炮包赔、自摸分摊
-import type { GamePlayer, ScoreFlowEvent, TableActionType, TileType, WinPresentation } from '../../core/contracts/types'
+import type { TableActionType, TileType, WinPresentation } from '../../core/contracts/types'
 import type { RoundResult, RoundScoreChange, RoundScoreDetail } from '../../core/contracts/gamePort'
 import { evaluateShandongHand, type WinFlags } from './shandongRules'
 import type { ShandongGameState, ShandongEndGameOptions } from './shandongState'
@@ -26,10 +26,29 @@ export function createShandongSettlement(options: ShandongSettlementOptions) {
 
   async function settleWin(winnerIndex: number, endOptions: ShandongEndGameOptions = {}) {
     const winner = state.players[winnerIndex]
-    const isSelfDraw = Boolean(endOptions.selfDraw || endOptions.tianhu || endOptions.dihu)
+    if (!winner) return
+    const isSelfDraw = Boolean(endOptions.selfDraw || endOptions.tianhu)
     const isRobbedKong = Boolean(endOptions.robbedKong)
     const sourceFrom = endOptions.sourceFrom ?? endOptions.robbedKongPlayerIndex ?? -1
     const winTile = endOptions.winTile ?? winner.hand[winner.hand.length - 1]
+    // 外来胡牌只加入算番副本；实体仍属于牌河/补杠者，保持牌数守恒。
+    const winHand = endOptions.winHand ?? (isSelfDraw ? [...winner.hand] : [...winner.hand, winTile])
+    const flags: WinFlags = {
+      selfDraw: isSelfDraw,
+      kongBloom: Boolean(endOptions.kongBloom),
+      robbedKong: isRobbedKong,
+      tianhu: Boolean(endOptions.tianhu),
+      dihu: Boolean(endOptions.dihu),
+      haidi: state.lastNormalDrawPlayer.value === winnerIndex && isSelfDraw,
+      isMingLou: state.mingLouPlayers.value.has(winnerIndex),
+      isBaoTing: state.baoTingPlayers.value.has(winnerIndex),
+      luanJiang: state.luanJiang.value,
+    }
+    const evalResult = evaluateShandongHand(winner, winHand, winner.melds, flags)
+    if (!evalResult || (!isSelfDraw && (sourceFrom < 0 || sourceFrom === winnerIndex || !state.players[sourceFrom]))) {
+      options.announce?.('胡牌校验未通过，未扣除任何玩家积分', 'red')
+      return
+    }
 
     const actionType: TableActionType = isRobbedKong
       ? 'robbed-kong-win'
@@ -39,7 +58,7 @@ export function createShandongSettlement(options: ShandongSettlementOptions) {
     state.phase.value = 'win-effect'
     state.winningPlayerIndex.value = winnerIndex
 
-    const winTitle = isRobbedKong ? '抢杠胡' : (isSelfDraw ? '自摸' : '点炮胡')
+    const winTitle = endOptions.tianhu ? '天胡' : endOptions.dihu ? '地胡' : isRobbedKong ? '抢杠胡' : (isSelfDraw ? '自摸' : '点炮胡')
     options.announce?.(`${winner.name} ${winTitle}！`, 'gold')
     options.showTableAction?.(actionType, winnerIndex, sourceFrom >= 0 ? sourceFrom : null, winTile, -1)
 
@@ -64,21 +83,7 @@ export function createShandongSettlement(options: ShandongSettlementOptions) {
     options.playSound(isSelfDraw ? 'zimo.mp3' : 'hu.mp3')
     options.playSound('hu_effect_sound.mp3')
 
-    const flags: WinFlags = {
-      selfDraw: isSelfDraw,
-      kongBloom: Boolean(endOptions.kongBloom),
-      robbedKong: isRobbedKong,
-      tianhu: Boolean(endOptions.tianhu),
-      dihu: Boolean(endOptions.dihu),
-      haidi: state.wall.value.length === 0 && isSelfDraw,
-      isMingLou: state.mingLouPlayers.value.has(winnerIndex),
-      isBaoTing: state.baoTingPlayers.value.has(winnerIndex),
-      luanJiang: state.luanJiang.value,
-    }
-
-    const evalResult = evaluateShandongHand(winner, winner.hand, winner.melds, flags)
-
-    const baseUnitPoints = evalResult?.totalPoints ?? 10
+    const baseUnitPoints = evalResult.totalPoints
     const details: RoundScoreDetail[] = []
 
     // 展示花分明细
@@ -106,8 +111,9 @@ export function createShandongSettlement(options: ShandongSettlementOptions) {
       scoreDeltas[sourceFrom] -= amount
       scoreDeltas[winnerIndex] += amount
       totalWon = amount
-    } else if (isSelfDraw) {
-      // 自摸：其余三家各付一份
+    } else if (isSelfDraw || endOptions.dihu) {
+      // 自摸与原规则的地胡固定结算：其余三家各付一份。
+      // 地胡牌张仍来自庄家弃牌，不能因此当作已在赢家手中。
       for (let i = 0; i < state.players.length; i += 1) {
         if (i === winnerIndex) continue
         let payerAmount = baseUnitPoints
@@ -146,10 +152,10 @@ export function createShandongSettlement(options: ShandongSettlementOptions) {
       winnerIndex,
       winner: winner.name,
       roundLabel: options.getRoundLabel(),
-      winType: evalResult?.winType ?? (isSelfDraw ? 'self-draw' : 'discard'),
+      winType: evalResult.winType,
       winTile,
-      multiplier: evalResult?.totalMultiplier ?? 1,
-      totalMultiplier: evalResult?.totalMultiplier ?? 1,
+      multiplier: evalResult.totalMultiplier,
+      totalMultiplier: evalResult.totalMultiplier,
       points: baseUnitPoints,
       totalWon,
       details,

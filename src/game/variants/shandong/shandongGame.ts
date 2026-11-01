@@ -24,6 +24,7 @@ import {
   type ShandongHumanBridge,
 } from './shandongControllers'
 import { resolveAnimeAudioPolicy } from '../../core/presentation/animeAudioPolicy'
+import type { ReplayFrameSource, ReplayRecorderHooks, ReplayDeclaration } from '../../replay/types'
 import {
   ANIME_ACTION_FALLBACK_AUDIO,
   type AnimeFixedTtsExecutor,
@@ -35,6 +36,7 @@ const ANIME_FIXED_ACTION_AUDIO_FILES: ReadonlySet<string> = new Set(
 )
 
 interface UseShandongGameOptions {
+  recorder?: ReplayRecorderHooks
   playSound?: (name: string, volume?: number, onFinish?: () => void) => unknown
   playSoundAndWait?: (name: string, volume?: number) => Promise<void>
   controllers?: ShandongController[]
@@ -66,6 +68,7 @@ export function useShandongGame({
   animeFixedTts,
   getJiangRule = () => '258',
   getAllowChiRule = () => true,
+  recorder,
 }: UseShandongGameOptions = {}) {
   const sound = headless ? () => {} : playSound
   const soundAndWait = headless ? async () => {} : playSoundAndWait
@@ -106,6 +109,16 @@ export function useShandongGame({
   state.luanJiang.value = getJiangRule() === 'luan'
   state.allowChi.value = getAllowChiRule() !== false
   const selectors = createShandongSelectors(state, ruleset)
+  let initialWall: TileType[] = []
+  const replayFrame = (): ReplayFrameSource => ({
+    players: state.players, wallLeft: state.wall.value.length, headDrawn: state.wallHeadDrawn.value,
+    currentPlayer: state.currentPlayer.value, round: state.round.value, dealer: state.dealer.value,
+    honba: state.honba.value, matchType: state.matchType.value,
+    diceValues: state.diceValues.value, diceThrowerIndex: state.diceThrowerIndex.value,
+    jokerTiles: [], wildcardTiles: [], initialWall, gangHeadTile: state.gangHeadTile.value,
+    shandong: { jiang: state.luanJiang.value ? 'luan' : '258', allowChi: state.allowChi.value },
+  })
+  const onDeclaration = (seat: number, kind: ReplayDeclaration) => recorder?.declaration?.({ seat, kind }, replayFrame())
 
   let openingTimeline!: ReturnType<typeof createShandongOpening>
   let settlementTimeline!: ReturnType<typeof createShandongSettlement>
@@ -217,6 +230,7 @@ export function useShandongGame({
 
   function showTableAction(type: TableActionEvent['type'], actorIndex: number, sourceIndex: number | null, tile: TileType, meldIndex: number) {
     transient.showTableAction(type, actorIndex, sourceIndex, tile, meldIndex)
+    recorder?.tableAction({ type, actorIndex, sourceIndex, tile, meldIndex }, replayFrame())
   }
 
   tileFlow = createShandongTileFlow({
@@ -239,9 +253,12 @@ export function useShandongGame({
     },
     wait,
     routeDiscard: (from, tile) => turnOrchestrator.routeDiscard(from, tile),
+    onDraw: (seat, tile, reason) => recorder?.draw({ seat, tile, fromTail: reason !== 'normal', reason }, replayFrame()),
+    onDiscard: (seat, tile, id) => recorder?.discard({ seat, tile, id }, replayFrame()),
   })
 
   turnOrchestrator = createShandongTurnOrchestrator({
+    onDeclaration,
     controllerDrivenLockedTurns,
     state,
     controllers,
@@ -258,6 +275,9 @@ export function useShandongGame({
   })
 
   settlementTimeline = createShandongSettlement({
+    onRoundSettled: () => {
+      if (state.result.value) recorder?.roundEnd(state.result.value, replayFrame())
+    },
     state,
     playSound: playPresentationSound,
     playSoundAndWait: playPresentationSoundAndWait,
@@ -268,6 +288,10 @@ export function useShandongGame({
   })
 
   openingTimeline = createShandongOpening({
+    onRoundReady: (wall) => {
+      initialWall = wall
+      recorder?.roundStart(replayFrame())
+    },
     state,
     clearTimers,
     wait,
@@ -290,6 +314,7 @@ export function useShandongGame({
   })
 
   playerActions = createShandongHuman({
+    onDeclaration,
     state,
     humanController,
     turnOrchestrator,
@@ -316,6 +341,7 @@ export function useShandongGame({
   })
 
   function clearPresentation() {
+    playerActions?.resetDeclaration()
     clearTimers()
     animeFixedTts?.cancel()
     countdown?.stop()
@@ -327,6 +353,7 @@ export function useShandongGame({
   }
 
   function startGame(mode?: MatchType, options: GameStartOptions = {}) {
+    playerActions?.resetDeclaration()
     state.luanJiang.value = getJiangRule() === 'luan'
     state.allowChi.value = getAllowChiRule() !== false
     controllers.forEach((c) => c.reset())

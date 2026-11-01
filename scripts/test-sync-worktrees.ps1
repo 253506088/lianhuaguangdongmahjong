@@ -112,4 +112,32 @@ Assert ((Git $local.repo @('show', 'vibehub:shared.txt')) -eq 'shared blood-flow
 $resurrected = $true
 try { Git $local.repo @('cat-file', '-e', "vibehub:$bloodFlowWsEntry") | Out-Null } catch { $resurrected = $false }
 Assert (-not $resurrected) 'master-only blood-flow WS entry resurrected (local)'
+
+$shandong = New-Fixture 'shandong-assembly' $true
+$privateApp = @'
+import { useVibeRemoteGame } from './private-p2p'
+import { useShandongGame } from './game/variants/shandong/shandongGame'
+const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)
+const shandongGame = useShandongGame({
+  getAllowChiRule: () => shandongAllowChi.value,
+})
+<RulesPanel :open="rulesOpen" :variant="selectedRule" @close="rulesOpen = false" />
+<Header :base-score="selectedRule === 'lotus-blood-flow' ? BLOOD_FLOW_CONFIG.basePoints : undefined" />
+'@
+Write-Utf8 (Join-Path $shandong.target 'src/App.vue') $privateApp
+Git $shandong.target @('add', 'src/App.vue') | Out-Null
+Git $shandong.target @('commit', '-m', 'P2P Shandong assembly') | Out-Null
+Run-Sync $shandong $true 'shandong-wiring'
+$wired = Get-Content -Raw (Join-Path $shandong.target 'src/App.vue')
+Assert ($wired.Contains("from './private-p2p'")) 'P2P assembly lost'
+Assert ($wired.Contains('recorder: replay.hooks')) 'Shandong recorder missing'
+Assert ($wired.Contains('ref<RuleVariant>(DEFAULT_RULE_VARIANT)')) 'Shandong startup preference missing'
+Assert ($wired.Contains(':shandong-jiang="shandongJiang"')) 'Rules configuration missing'
+Assert ($wired.Contains("selectedRule === 'shandong' ? SHANDONG_BASE_SCORE")) 'Shandong base score missing'
+Write-Utf8 (Join-Path $shandong.repo 'shared.txt') 'another shared change'
+Git $shandong.repo @('add', 'shared.txt') | Out-Null
+Git $shandong.repo @('commit', '-m', 'second sync') | Out-Null
+Run-Sync $shandong $true 'shandong-wiring-twice'
+$twice = Get-Content -Raw (Join-Path $shandong.target 'src/App.vue')
+Assert ([regex]::Matches($twice,'recorder: replay.hooks').Count -eq 1) 'Repeated recorder injection'
 Write-Host "PASS: dirty master/target, linked worktree, spaces, keep restoration, WS deletion, no-op, local fallback. Evidence: $testRoot"

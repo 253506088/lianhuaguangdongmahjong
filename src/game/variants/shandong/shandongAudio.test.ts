@@ -68,7 +68,7 @@ describe('山东麻将音频与语音播报', () => {
     const showTableAction = vi.fn()
     const state = createShandongGameState()
     resetLocalPlayers(state, 2000)
-    state.players[0].hand = ['m2', 'm2']
+    state.players[0].hand = ['m1','m2','m3','m4','m5','m6','p1','p2','p3','s1','s2','s3','m2','m2']
 
     const settlement = createShandongSettlement({
       state,
@@ -88,6 +88,7 @@ describe('山东麻将音频与语音播报', () => {
     showTableAction.mockClear()
 
     // 2. 测试点炮
+    state.players[0].hand.pop()
     settlement.settleWin(0, { selfDraw: false, winTile: 'm2', sourceFrom: 1 })
     expect(playSound).toHaveBeenCalledWith('hu.mp3')
     expect(playSound).toHaveBeenCalledWith('hu_effect_sound.mp3')
@@ -244,7 +245,7 @@ describe('山东麻将音频与语音播报', () => {
   it('胡牌时先呈现 win-effect 特写与音效，再进入 revealing 亮牌，最后才进入 settled 弹窗', async () => {
     const state = createShandongGameState()
     resetLocalPlayers(state, 2000)
-    state.players[0].hand = ['m2', 'm2']
+    state.players[0].hand = ['m1','m2','m3','m4','m5','m6','p1','p2','p3','s1','s2','s3','m2','m2']
     const showTableAction = vi.fn()
     const playSound = vi.fn()
     const announce = vi.fn()

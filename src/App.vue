@@ -15,6 +15,7 @@ import { useGame } from './game/variants/guangma/game'
 import { useLotusGame } from './game/variants/lotus/lotusGame'
 import { useBloodFlowGame } from './game/variants/lotus/bloodFlow/useBloodFlowGame'
 import { useShandongGame } from './game/variants/shandong/shandongGame'
+import { SHANDONG_BASE_SCORE } from './game/variants/shandong/shandongRules'
 import { bloodFlowEnabled } from './game/variants/lotus/bloodFlow/availability'
 import { BLOOD_FLOW_CONFIG } from './game/variants/lotus/bloodFlow/config'
 import { createLocalLlmControllers, createLotusLlmControllers } from './game/llm/runtime'
@@ -63,7 +64,7 @@ const robotIconUrl = `${import.meta.env.BASE_URL}img/robot.svg`
 const rulesOpen = ref(false)
 const resultVisible = ref(true)
 const selectedMatch = ref<MatchType>('east')
-const selectedRule = ref<RuleVariant>(readRuleVariantPreference() ?? DEFAULT_RULE_VARIANT)
+const selectedRule = ref<RuleVariant>(DEFAULT_RULE_VARIANT)
 const shandongJiang = ref<'258' | 'luan'>(readShandongJiangPreference())
 const shandongAllowChi = ref<boolean>(readShandongAllowChiPreference())
 
@@ -261,6 +262,7 @@ const bloodFlowGame = useBloodFlowGame({ playSound: playEffect, playSoundAndWait
   // AI 分析记录：引擎拿到的是一个稳定代理（换场只换内部录制器）；关闭时为 null，零成本。
   analysis: analysis.port })
 const shandongGame = useShandongGame({
+  recorder: replay.hooks,
   playSound: playEffect,
   playSoundAndWait: playEffectAndWait,
   countdownEnabled: false,
@@ -630,14 +632,14 @@ const themeLockReason = computed(() => (
         :match-name="matchName"
         :round-label="roundLabel"
         :honba="honba"
-          :base-score="selectedRule === 'lotus-blood-flow' ? BLOOD_FLOW_CONFIG.basePoints : undefined"
+          :base-score="selectedRule === 'shandong' ? SHANDONG_BASE_SCORE : selectedRule === 'lotus-blood-flow' ? BLOOD_FLOW_CONFIG.basePoints : undefined"
         :room-id="roomId"
         :signal-quality="signalQuality"
         :sound-on="soundOn"
         :theme-name="tableThemeName"
         :theme-locked="themeLocked"
         :theme-lock-reason="themeLockReason"
-        @quit="quitMatch"
+        @quit="gameMode === 'local' ? returnToLobby() : quitMatch()"
         @toggle-sound="soundOn = !soundOn"
         @open-rules="rulesOpen = true"
         @change-theme="changeTableTheme"
@@ -801,7 +803,7 @@ const themeLockReason = computed(() => (
           @preview-four-red="debugFourRed"
         />
       </div>
-    <RulesPanel :open="rulesOpen" :variant="selectedRule" @close="rulesOpen = false" />
+    <RulesPanel :open="rulesOpen" :variant="selectedRule" :shandong-jiang="shandongJiang" :shandong-allow-chi="shandongAllowChi" @close="rulesOpen = false" />
     <button
       v-if="gameMode === 'local' && showLobby"
       class="llm-fab"

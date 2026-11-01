@@ -57,6 +57,7 @@ export function createShandongSelectors(state: ShandongGameState, ruleset: RuleS
   const userCanMingLou = computed(() => {
     const user = common.user.value
     if (!user) return false
+    if (['lobby', 'opening', 'win-effect', 'revealing', 'settled', 'finished'].includes(state.phase.value)) return false
     if (state.mingLouPlayers.value.has(user.seat)) return false
     // 报听牌之后允许明楼
     if (state.baoTingPlayers.value.has(user.seat)) return true
@@ -84,6 +85,7 @@ export function createShandongSelectors(state: ShandongGameState, ruleset: RuleS
   return {
     ...common,
     ...playerSelectors,
+    userKongs: computed(() => state.baoTingPlayers.value.has(0) || state.mingLouPlayers.value.has(0) ? [] : playerSelectors.userKongs.value),
     userCanHu,
     userCanMingLou,
     userCanBaoTing,

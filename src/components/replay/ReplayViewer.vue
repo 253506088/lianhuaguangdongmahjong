@@ -58,7 +58,9 @@ const resultBanner = computed(() => {
   if (final.winSeat == null) return `${head}本局结束`
   const winner = props.match.players[final.winSeat]?.name ?? ''
   const kind = replayWinLabel(final.winType)
-  const points = final.points ? ` · ${formatDelta(final.points * 3)}分` : ''
+  const totalWon = final.result?.totalWon ?? final.result?.scoreChanges?.find(change => change.playerIndex === final.winSeat)?.delta
+    ?? (final.points ? final.points * (final.winType === 'discard' || final.winType === 'dihu' ? 1 : 3) : 0)
+  const points = totalWon ? ` · ${formatDelta(totalWon)}分` : ''
   return `${head}${winner} ${kind}${points}`
 })
 
@@ -124,6 +126,7 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
       <div class="replay-title">
         <strong>{{ match.rulesetName }}</strong>
         <span>{{ match.matchName }} · {{ round?.roundLabel ?? '' }}</span>
+        <span v-if="round?.shandong">{{ round.shandong.jiang === 'luan' ? '乱将' : '258掌将' }} · {{ round.shandong.allowChi ? '可吃' : '不可吃' }}</span>
         <i v-if="match.status === 'finished'" class="replay-rank" :class="`rank-${match.myRank}`">
           {{ formatRank(match.myRank) }}
         </i>
@@ -159,6 +162,8 @@ onBeforeUnmount(() => window.removeEventListener('keydown', onKeydown))
 
     <section v-if="frame" class="replay-user">
       <div class="user-identity" :class="{ active: frame.currentPlayer === 0 }">
+        <span v-if="frame.table.players[0]?.isMingLou" class="minglou-badge">搂</span>
+        <span v-else-if="frame.table.players[0]?.isBaoTing" class="baoting-badge">听</span>
         <span v-if="round && frame.table.dealerIndex === 0" class="dealer-badge">庄</span>
         <img class="avatar" :src="humanAvatar" :alt="`${humanName}头像`" @error="onAvatarError" />
         <div class="player-info">

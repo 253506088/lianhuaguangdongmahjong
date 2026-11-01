@@ -130,6 +130,8 @@ function safeSave(work: () => Promise<void> | void) {
 
 function seatState(player: GamePlayer): ReplaySeatState {
   return {
+    ...(player.isBaoTing === undefined ? {} : { isBaoTing: player.isBaoTing }),
+    ...(player.isMingLou === undefined ? {} : { isMingLou: player.isMingLou }),
     hand: [...player.hand],
     melds: player.melds.map(cloneMeld),
     drawnTileIndex: player.drawnTileIndex,
@@ -140,6 +142,11 @@ function seatState(player: GamePlayer): ReplaySeatState {
 
 function anchorOf(frame: ReplayFrameSource): ReplayAnchor {
   return {
+    ...(frame.shandong ? {
+      isBaoTing: frame.players.map(player => Boolean(player.isBaoTing)),
+      isMingLou: frame.players.map(player => Boolean(player.isMingLou)),
+      gangHeadTile: frame.gangHeadTile ?? null,
+    } : {}),
     hands: frame.players.map((player) => [...player.hand]),
     melds: frame.players.map((player) => player.melds.map(cloneMeld)),
     discards: frame.players.map((player) => [...player.discards]),
@@ -166,6 +173,7 @@ function matchPlayersOf(frame: ReplayFrameSource): ReplayPlayer[] {
 
 /** 红中花牌等「摸牌后立即易手」的情况：报出牌张与实际进张不一致时按手牌收敛。 */
 function drawnTileOf(player: GamePlayer, reported: TileType): { tile: TileType; replaced: boolean } {
+  if (reported.startsWith('f')) return { tile: reported, replaced: false }
   if (player.hand.includes(reported)) return { tile: reported, replaced: false }
   const last = player.hand[player.hand.length - 1]
   return last ? { tile: last, replaced: true } : { tile: reported, replaced: false }
@@ -216,6 +224,7 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
     }
     round.steps.push({
       ...draft,
+      ...(frame.gangHeadTile === undefined ? {} : { gangHeadTile: frame.gangHeadTile }),
       wallLeft: frame.wallLeft,
       headDrawn: frame.headDrawn,
       currentPlayer: frame.currentPlayer,
@@ -266,6 +275,7 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
       const active = match!
       // 上一局若异常缺结算（例如中途重开），丢弃残留的进行中记录。
       round = {
+        ...(frame.shandong ? { shandong: { ...frame.shandong }, initialWall: [...(frame.initialWall ?? [])] } : {}),
         id: `${active.id}:${rounds.length + 1}`,
         matchId: active.id,
         roundIndex: rounds.length + 1,
@@ -280,7 +290,7 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
         },
         diceThrowerIndex: frame.diceThrowerIndex,
         flipTile: frame.flipTile ?? null,
-        jokerTiles: frame.jokerTiles?.length ? [...frame.jokerTiles] : [...DEFAULT_JOKERS],
+        jokerTiles: [...(frame.jokerTiles ?? DEFAULT_JOKERS)],
         wildcardTiles: [...(frame.wildcardTiles ?? [])],
         wallBreakIndex: frame.wallBreakIndex ?? 0,
         flipStack: frame.flipStack ?? null,
@@ -303,8 +313,15 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
         seat: event.seat,
         tile,
         fromTail: event.fromTail || replaced,
+        ...(event.reason ? { drawReason: event.reason } : {}),
         state: seatState(player),
       }, frame)
+    },
+
+    declaration(event, frame) {
+      const player = frame.players[event.seat]
+      if (!player) return
+      pushStep({ t: 'declaration', seat: event.seat, declaration: event.kind, state: seatState(player) }, frame)
     },
 
     discard(event, frame) {
@@ -347,6 +364,11 @@ export function createReplayRecorder(options: ReplayRecorderOptions): ReplayReco
         return
       }
       const final: ReplayRoundFinal = {
+        ...(frame.shandong ? {
+          isBaoTing: frame.players.map(player => Boolean(player.isBaoTing)),
+          isMingLou: frame.players.map(player => Boolean(player.isMingLou)),
+          gangHeadTile: frame.gangHeadTile ?? null,
+        } : {}),
         hands: frame.players.map((player) => [...player.hand]),
         melds: frame.players.map((player) => player.melds.map(cloneMeld)),
         discards: frame.players.map((player) => [...player.discards]),
