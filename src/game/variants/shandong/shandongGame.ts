@@ -43,6 +43,7 @@ interface UseShandongGameOptions {
   humanPlayerSeed?: PlayerSeed
   countdownEnabled?: boolean
   headless?: boolean
+  controllerDrivenLockedTurns?: boolean
   getTableThemeName?: () => string
   ruleset?: RuleSet
   animeFixedTts?: AnimeFixedTtsExecutor
@@ -59,6 +60,7 @@ export function useShandongGame({
   humanPlayerSeed,
   countdownEnabled = true,
   headless = false,
+  controllerDrivenLockedTurns = false,
   getTableThemeName = () => '',
   ruleset = SHANDONG_RULESET,
   animeFixedTts,
@@ -240,6 +242,7 @@ export function useShandongGame({
   })
 
   turnOrchestrator = createShandongTurnOrchestrator({
+    controllerDrivenLockedTurns,
     state,
     controllers,
     drawFor: tileFlow.drawFor,

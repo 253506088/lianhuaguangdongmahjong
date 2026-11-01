@@ -1,5 +1,6 @@
 // 山东麻将开局时间线：掷骰 → 144张发牌 → 起手补花 → 天胡判定
 import type { MatchType, TileType } from '../../core/contracts/types'
+import type { GameStartOptions } from '../../core/contracts/gamePort'
 import { MATCH_HANDS, PACE_MS } from '../../core/local/localGameConfig'
 import { resetLocalPlayers, type PlayerSeed } from '../../shared/runtime/localOpening'
 import type { ShandongGameState } from './shandongState'
@@ -33,9 +34,7 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
     resetLocalPlayers(state, 2000, options.playerSeeds, options.humanPlayerSeed)
   }
 
-  async function start(mode?: MatchType, startOptions: {
-    waitForTableReady?: () => Promise<void>
-  } = {}) {
+  async function start(mode?: MatchType, startOptions: GameStartOptions = {}) {
     options.clearTimers()
     if (mode && MATCH_HANDS[mode]) {
       state.matchType.value = mode
@@ -46,6 +45,7 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
     }
 
     const currentSequence = ++sequence
+    if (startOptions.dealer !== undefined) state.dealer.value = startOptions.dealer
 
     state.phase.value = 'opening'
     state.openingStage.value = 'start'
@@ -67,9 +67,10 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
     })
 
     resetPlayers()
+    if (startOptions.scores) state.players.forEach((p, i) => { p.score = startOptions.scores![i] })
 
     // 洗牌（144张牌）
-    const wall = shuffle(createShandongWall())
+    const wall = startOptions.initialWall ? [...startOptions.initialWall] : shuffle(createShandongWall())
     ensureTailNotFlower(wall)
     state.wall.value = wall
     state.gangHeadTile.value = wall.length > 0 ? wall[wall.length - 1] : null
@@ -83,8 +84,8 @@ export function createShandongOpening(options: ShandongOpeningOptions) {
 
     // 掷骰子
     state.openingStage.value = 'dice'
-    const d1 = Math.floor(Math.random() * 6) + 1
-    const d2 = Math.floor(Math.random() * 6) + 1
+    const d1 = startOptions.openingDice?.[0] ?? Math.floor(Math.random() * 6) + 1
+    const d2 = startOptions.openingDice?.[1] ?? Math.floor(Math.random() * 6) + 1
     state.diceValues.value = [d1, d2]
     state.diceThrowerIndex.value = state.dealer.value
     options.playSound('dice.mp3')

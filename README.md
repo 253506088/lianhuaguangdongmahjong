@@ -1,8 +1,9 @@
 # 莲花广麻
 
-本 fork 新增 **Android 11+ 离线应用**与**八花独立 3D 展示区**。Android 版支持本地普通 AI 对战，当前 P2P 联机已知不可用，应用中不开放联机入口。
+本 fork 提供 **Android 11+ 应用**与**八花独立 3D 展示区**。Android 版支持离线普通 AI 对战，以及 **附近同桌：同一 Wi-Fi / 手机热点下扫码直连，2–4 位真人，空位补 AI**。房主选择玩法，无限循环轮庄、不限出牌时间，掉线可回原座位；掉线托管由房主控制，默认关闭。
 
 - [Android 安装、构建、正式签名与验证](docs/android.md)
+- [附近同桌：使用方法、重连与实现](docs/nearby-rooms.md)
 - [如何向原项目提交 PR、如何同步上游更新](docs/fork-upstream.md)
 - [花牌素材来源及授权](assets-src/flowers/README.md)
 

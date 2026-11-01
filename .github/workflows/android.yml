@@ -32,6 +32,9 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
       - run: pnpm install --frozen-lockfile
       - run: chmod +x android/gradlew && pnpm android:debug
+      - name: Test native TLS transport and offline QR codec
+        working-directory: android
+        run: ./gradlew testDebugUnitTest --console=plain
       - name: Enable KVM
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules

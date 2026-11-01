@@ -22,12 +22,13 @@ import android.window.OnBackInvokedDispatcher;
 import androidx.webkit.WebViewAssetLoader;
 import java.io.ByteArrayInputStream;
 
-/** Local HTTPS assets, with no JavaScript-to-native privileged bridge. */
+/** Local HTTPS assets with an origin-scoped nearby room bridge. */
 public class MainActivity extends Activity {
     static final String HOST = "appassets.androidplatform.net";
     static final String GAME_URL = "https://" + HOST + "/assets/game/index.html";
     private WebView webView;
     private AlertDialog exitDialog;
+    private NearbyBridge nearby;
 
     @SuppressLint("SetJavaScriptEnabled")
     @Override public void onCreate(Bundle state) {
@@ -76,6 +77,7 @@ public class MainActivity extends Activity {
             return insets;
         });
         setContentView(webView);
+        nearby = new NearbyBridge(this, webView);
         enterImmersive();
         // WebView state does not preserve the JS engine. Load a fresh local page
         // after process death; DOM storage still keeps preferences and replays.
@@ -100,7 +102,7 @@ public class MainActivity extends Activity {
         webView.evaluateJavascript("window.__mahjongHandleBack ? window.__mahjongHandleBack() : false", result -> {
             if ("true".equals(result) || isFinishing()) return;
             exitDialog = new AlertDialog.Builder(this).setTitle(R.string.exit_title)
-                .setMessage(R.string.exit_message).setNegativeButton(R.string.stay, null)
+                .setMessage(nearby != null && nearby.isActive() ? R.string.nearby_exit_message : R.string.exit_message).setNegativeButton(R.string.stay, null)
                 .setPositiveButton(R.string.leave, (dialog, which) -> moveTaskToBack(true)).create();
             exitDialog.show();
         });
@@ -122,17 +124,24 @@ public class MainActivity extends Activity {
         if (focused) enterImmersive();
     }
     @Override protected void onPause() {
-        if (webView != null) { webView.onPause(); webView.pauseTimers(); }
+        if (nearby != null) nearby.foreground(false);
+        if (webView != null) { webView.onPause(); if (nearby == null || !nearby.isActive()) webView.pauseTimers(); }
         super.onPause();
     }
     @Override protected void onResume() {
         super.onResume();
         if (webView != null) { webView.resumeTimers(); webView.onResume(); }
+        if (nearby != null) nearby.foreground(true);
         enterImmersive();
     }
     @Override protected void onDestroy() {
+        if (nearby != null) nearby.close();
         if (exitDialog != null) exitDialog.dismiss();
         if (webView != null) { webView.stopLoading(); webView.destroy(); webView = null; }
         super.onDestroy();
+    }
+    @Override protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        if (nearby != null && nearby.onActivityResult(requestCode, resultCode, data)) return;
+        super.onActivityResult(requestCode, resultCode, data);
     }
 }

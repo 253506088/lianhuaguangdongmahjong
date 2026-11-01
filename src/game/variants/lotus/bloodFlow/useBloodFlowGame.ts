@@ -75,6 +75,8 @@ export interface BloodFlowGameOptions {
   autoplay?: boolean
   paceMs?: number
   countdownEnabled?: boolean
+  /** Nearby rooms continue until their host dissolves them. */
+  infiniteRounds?: boolean
   /** 对局回放录制钩子（可选；不传时零行为变化，且不会请求旁观视角）。 */
   recorder?: ReplayRecorderHooks
   /**
@@ -572,7 +574,7 @@ export function useBloodFlowGame(options: BloodFlowGameOptions = {}) {
       state.revealHands.value = true
       state.result.value = { winner: '本局结束', draw: result.winCounts.every(n => n === 0), roundLabel: common.roundLabel.value,
         scoreChanges: state.players.map((p, i) => ({ playerIndex: i, name: p.name, avatar: p.avatar, delta: result.endingScores[p.seat] - result.openingScores[p.seat], score: p.score })) }
-      state.matchFinished.value = state.round.value >= BLOOD_FLOW_CONFIG.rounds[state.matchType.value]
+      state.matchFinished.value = !options.infiniteRounds && state.round.value >= BLOOD_FLOW_CONFIG.rounds[state.matchType.value]
       // 局末感言为本地模板台词（不发模型请求），联机与单机都播，避免联机结算没有台词。
       // roundSpeechBusy 让结算面板与局间倒计时等感言播完（用户要求，2026-09-10）。
       try {
