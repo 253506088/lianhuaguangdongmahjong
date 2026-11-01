@@ -57,7 +57,7 @@ onBeforeUnmount(() => window.removeEventListener('resize', reposition))
 .tile-hint-count { display: block; font-size: 21px; line-height: 1.05; font-variant-numeric: tabular-nums; color: var(--theme-accent, #f4cb63); }
 .tile-hint-count small { margin-left: 3px; font-size: 10px; font-weight: 400; color: var(--theme-text, #fff4d0); }
 .tile-hint-item.exhausted .tile-hint-count { color: #ff8e82; }
-@media (max-height: 500px), (max-width: 600px) {
+@container (max-height: 500px) or (max-width: 600px) {
   .tile-unseen-hint { padding: 6px; border-radius: 9px; }
   .tile-hint-item { padding: 4px 5px; }
   .tile-hint-item img { width: 20px; height: 29px; margin-right: 4px; }

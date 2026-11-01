@@ -50,7 +50,7 @@ SDK 路径、Gradle 缓存、APK/AAB、签名文件、密码配置均在 `.gitig
 
 ## 验证
 
-本次 Android 11（WebView 83）和 Android 16（WebView 133）的实际 APK 验收均通过，详情见 [验证记录](verification-android-flowers.md)。
+1.2.0 的查牌功能、五套主题、小屏触控、Android 11 / WebView 83 实际 APK 与签名交付结果见 [查牌验收记录](verification-tile-inspection.md)。此前八花和 Android 11 / 16 适配的历史结果见 [花牌验证记录](verification-android-flowers.md)。
 
 ```sh
 pnpm test --maxWorkers=2

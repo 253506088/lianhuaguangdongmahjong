@@ -632,6 +632,14 @@ button { font: inherit; }
 /* Transparent hand padding must not intercept clicks on the public 3D melds. */
 .user-area, .hand-rack { pointer-events: none; }
 .user-identity, .hand-tile-slot { pointer-events: auto; }
+/* On the narrowest landscape screens, keep the avatar clear of the first tiles. */
+@container (max-width: 600px) and (max-height: 450px) {
+  .game-app .user-identity {
+    bottom: calc(var(--safe-bottom, 0px) + 72px);
+    transform: scale(.75);
+    transform-origin: left bottom;
+  }
+}
 .hand-tile-slot { position: relative; display: flex; flex: 0 0 auto; align-items: flex-end; touch-action: none; }
 .hand-hit-area { position: absolute; inset: 0; pointer-events: none; }
 .ting-arrow {

@@ -2,11 +2,14 @@ import { expect, test, type Page } from '@playwright/test'
 
 async function publicPoint(page: Page, source: string, tile: string, playerIndex: number) {
   return page.locator('canvas.mahjong-scene').evaluate((canvas, target) => {
-    const point = JSON.parse((canvas as HTMLElement).dataset.inspectionPoints || '[]')
-      .find((p: any) => p.source === target.source && p.tile === target.tile && p.playerIndex === target.playerIndex)
-    if (!point) throw new Error(`Missing public tile: ${JSON.stringify(target)}`)
     const rect = canvas.getBoundingClientRect()
-    return { x: rect.left + point.x * rect.width, y: rect.top + point.y * rect.height }
+    // A meld can extend behind an opaque avatar; click an exposed copy.
+    const point = JSON.parse((canvas as HTMLElement).dataset.inspectionPoints || '[]')
+      .filter((p: any) => p.source === target.source && p.tile === target.tile && p.playerIndex === target.playerIndex)
+      .map((p: any) => ({ x: rect.left + p.x * rect.width, y: rect.top + p.y * rect.height }))
+      .find((p: any) => document.elementFromPoint(p.x, p.y) === canvas)
+    if (!point) throw new Error(`Missing exposed public tile: ${JSON.stringify(target)}`)
+    return point as { x: number; y: number }
   }, { source, tile, playerIndex })
 }
 
