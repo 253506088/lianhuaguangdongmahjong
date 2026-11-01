@@ -187,6 +187,8 @@ Thumbs.db
 /android/**/build/
 /android/captures/
 !/android/gradlew.bat
+!/构建App.bat
+!/构建前端.bat
 .cxx/
 
 # Android install packages and private signing material: distribute via release

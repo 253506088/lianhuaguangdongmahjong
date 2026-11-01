@@ -8,6 +8,8 @@
 
 快速构建安装包：准备 Node.js 24、JDK 17、Android SDK 35 后，执行 `pnpm install --frozen-lockfile`、`pnpm android:debug`。APK 产物不提交 Git，可在本地构建目录或 GitHub Actions 的 Artifacts 获取。
 
+Windows 一键构建：双击 **`构建App.bat`** 生成正式签名的 Android 离线安装包（需配置签名，输出到 `artifacts/android`）；双击 **`构建前端.bat`** 生成 Web 静态文件（输出到 `dist`）。App 安装后普通 AI 对局无需后端或运行 `启动.bat`；自行配置的大模型 / TTS 需要相应网络服务。详见 [构建说明](docs/android.md)。
+
 [![GitHub Stars](https://img.shields.io/github/stars/BestGuo2020/lianhuaguangdongmahjong?style=flat&logo=github)](https://github.com/BestGuo2020/lianhuaguangdongmahjong/stargazers)
 [![License](https://img.shields.io/github/license/BestGuo2020/lianhuaguangdongmahjong)](./LICENSE)
 ![Node.js](https://img.shields.io/badge/Node.js-%5E20.19.0%20%7C%7C%20%3E%3D22.12.0-339933?logo=nodedotjs&logoColor=white)
