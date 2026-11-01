@@ -629,6 +629,9 @@ button { font: inherit; }
 .user-meld { display: flex; gap: 1px; padding: 2px; border-radius: 3px; background: rgba(0,0,0,.2); }
 .hand-rack { position: absolute; right: 0; bottom: 9px; left: 0; display: flex; align-items: flex-end; justify-content: center; gap: clamp(1px, .2vw, 4px); min-height: 88px; padding: 10px 14px 5px; border: 0; border-radius: 5px 5px 20px 20px; transform-origin: 50% 100%; }
 .hand-rack.has-melds { justify-content: flex-start; padding-right: 42%; padding-left: 11%; }
+/* Transparent hand padding must not intercept clicks on the public 3D melds. */
+.user-area, .hand-rack { pointer-events: none; }
+.user-identity, .hand-tile-slot { pointer-events: auto; }
 .hand-tile-slot { position: relative; display: flex; flex: 0 0 auto; align-items: flex-end; touch-action: none; }
 .hand-hit-area { position: absolute; inset: 0; pointer-events: none; }
 .ting-arrow {
@@ -645,94 +648,6 @@ button { font: inherit; }
   transform: translateX(-50%);
   animation: ting-arrow-bob .85s ease-in-out infinite alternate;
   transition: bottom .15s ease;
-}
-.ting-arrow.with-unseen {
-  bottom: calc(100% + 38px);
-}
-.hand-tile-slot.selected .ting-arrow.with-unseen {
-  bottom: calc(100% + 45px);
-}
-/* 鼠标悬停手牌/选中时提示未现剩余张数 */
-.tile-unseen-badge {
-  position: absolute;
-  z-index: 10;
-  bottom: calc(100% + 8px);
-  left: 50%;
-  transform: translateX(-50%);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: var(--theme-panel, #0e2018);
-  border: 1px solid var(--theme-accent, #f4cb63);
-  color: var(--theme-accent-text, #fff4d0);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65);
-  font-size: clamp(10px, 1.05vw, 12px);
-  font-weight: 700;
-  line-height: 1.2;
-  white-space: nowrap;
-  pointer-events: none;
-  user-select: none;
-  animation: unseen-badge-pop .18s cubic-bezier(0.18, 0.89, 0.32, 1.28) both;
-  transition: bottom .15s ease;
-}
-.tile-unseen-badge em {
-  font-style: normal;
-  font-weight: 900;
-  font-size: 1.18em;
-  color: var(--theme-accent, #ffd86b);
-  margin: 0 1px;
-}
-.tile-unseen-badge::after {
-  content: "";
-  position: absolute;
-  top: 100%;
-  left: 50%;
-  transform: translateX(-50%);
-  border-width: 4px;
-  border-style: solid;
-  border-color: var(--theme-accent, #f4cb63) transparent transparent transparent;
-}
-/* WebView 83 cannot resolve color-mix(), including values containing var().
-   Keep the opaque bubble and triangle above; enhance them only when supported. */
-@supports (color: color-mix(in srgb, #000, #fff)) {
-  .tile-unseen-badge {
-    background: color-mix(in srgb, var(--theme-panel, #0e2018) 92%, #000);
-    border-color: color-mix(in srgb, var(--theme-accent, #f4cb63) 78%, transparent);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), 0 0 8px color-mix(in srgb, var(--theme-accent, #f4cb63) 30%, transparent);
-  }
-  .tile-unseen-badge::after {
-    border-color: color-mix(in srgb, var(--theme-accent, #f4cb63) 78%, transparent) transparent transparent transparent;
-  }
-}
-.tile-unseen-badge.exhausted {
-  background: linear-gradient(135deg, rgba(42, 15, 15, 0.96), rgba(22, 6, 6, 0.98));
-  border-color: rgba(235, 87, 87, 0.8);
-  color: #ffe0de;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.65), 0 0 8px rgba(235, 87, 87, 0.35);
-}
-.tile-unseen-badge.exhausted em {
-  color: #ff6e61;
-}
-.tile-unseen-badge.exhausted::after {
-  border-color: rgba(235, 87, 87, 0.8) transparent transparent transparent;
-}
-.hand-tile-slot:hover .tile-unseen-badge {
-  bottom: calc(100% + 18px);
-}
-.hand-tile-slot.selected .tile-unseen-badge {
-  bottom: calc(100% + 25px);
-}
-@keyframes unseen-badge-pop {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 4px) scale(0.85);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
 }
 .hand-rack.dealing .mahjong-tile { animation: deal-to-user .23s cubic-bezier(.2,.85,.3,1) both; }
 .hand-rack::after { content: ""; position: absolute; right: 4%; bottom: -13px; left: 4%; height: 5px; border-radius: 50%; background: rgba(0,0,0,.38); filter: blur(3px); }
@@ -1037,7 +952,8 @@ button { font: inherit; }
   width: 100%;
   height: 100%;
   contain: strict;
-  pointer-events: none;
+  pointer-events: auto;
+  touch-action: none;
 }
 .table-loading {
   position: absolute;
@@ -1179,11 +1095,6 @@ button { font: inherit; }
   .hand-rack { min-height: 72px; padding: 5px 8px 4px; }
   .hand-rack .mahjong-tile { --tile-width: clamp(32px, 4.25vw, 38px); }
   .hand-rack .hand-tile-slot.drawn { margin-left: clamp(8px, 1.5cqh, 14px); }
-  .tile-unseen-badge { padding: 1px 4px; font-size: 9px; }
-  .hand-tile-slot:hover .tile-unseen-badge { bottom: calc(100% + 14px); }
-  .hand-tile-slot.selected .tile-unseen-badge { bottom: calc(100% + 20px); }
-  .ting-arrow.with-unseen { bottom: calc(100% + 30px); }
-  .hand-tile-slot.selected .ting-arrow.with-unseen { bottom: calc(100% + 36px); }
   .user-melds { bottom: 75px; }
   /* 本家卡的 width/padding/scale 由新版共享块覆盖；此处 72px 遗留规则会把本家卡
      压得比三家座位卡窄，造成四家尺寸不一致（R6.19 移除）。 */

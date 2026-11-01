@@ -766,7 +766,9 @@ export interface MingLouWaitItem {
  * 2. 所有玩家的弃牌堆；
  * 3. 所有玩家的副露；
  * 4. 其他明楼玩家因亮牌而公开的手牌。
- * 公式：4 - 弃牌堆 - 其他玩家明楼手牌 - 所有玩家副露 - 我的手牌
+ * 5. 从牌墙取出、独立展示的公开杠头牌。
+ * 公式：4 - 弃牌堆 - 其他玩家明楼手牌 - 所有玩家副露 - 我的手牌 - 杠头
+ * 未知包含牌墙和他人暗手，并不等于牌墙中实际剩余的张数。
  */
 export function computeUnseenTileCount(
   tile: TileType,

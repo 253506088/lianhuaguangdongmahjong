@@ -46,7 +46,7 @@ ANDROID_KEY_PASSWORD
 
 SDK 路径、Gradle 缓存、APK/AAB、签名文件、密码配置均在 `.gitignore` 中说明并排除。原生源码、wrapper JAR、资源 SVG、锁文件和 CI 必须提交。
 
-构建脚本会自动把 APK 复制到 `artifacts/android/mahjong-<版本号>.apk`（当前正式版为 `mahjong-1.1.1.apk`，`versionCode=2`），并生成同名 `.apk.sha256` 与 `.apk.build-info.json`，记录校验值、版本、源码提交和工作区是否有未提交改动。调试包文件名包含 `-debug`，历史版本保留。该目录为生成产物，不提交 Git。将 APK 传到 Android 11+ 手机上打开，按系统提示允许文件管理器安装应用即可；无需运行本机开发服务器。沿用相同签名可从 1.1.0 覆盖升级；正式版与 debug 版包名不同，可同时安装。
+构建脚本会自动把 APK 复制到 `artifacts/android/mahjong-<版本号>.apk`（当前正式版为 `mahjong-1.2.0.apk`，`versionCode=3`），并生成同名 `.apk.sha256` 与 `.apk.build-info.json`，记录校验值、版本、源码提交和工作区是否有未提交改动。调试包文件名包含 `-debug`，历史版本保留。该目录为生成产物，不提交 Git。将 APK 传到 Android 11+ 手机上打开，按系统提示允许文件管理器安装应用即可；无需运行本机开发服务器。沿用相同签名可从 1.1.0 / 1.1.1 覆盖升级；正式版与 debug 版包名不同，可同时安装。
 
 ## 验证
 

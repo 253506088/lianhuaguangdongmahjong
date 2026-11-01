@@ -13,6 +13,7 @@ function setup(meld?: Meld, action?: TableActionType) {
   scene.userData.highlightMaterial = new THREE.MeshBasicMaterial()
   const rendered: { face: TileType | null; position: THREE.Vector3; scale: number }[] = []
   const instances = {
+    pick: vi.fn<() => number | null>(() => null),
     begin: () => { rendered.length = 0 }, finish: () => {}, canReuse: () => false,
     add: (position: THREE.Vector3, _q: THREE.Quaternion, face: TileType | null, _opacity = 1, origin = position, scale = 1) => {
       const index = rendered.length
@@ -41,10 +42,36 @@ function setup(meld?: Meld, action?: TableActionType) {
     pointGapOffset: .965, wallDealOriginY: 1,
     addWinEffect: () => {}, addWinningDisplayTile: () => {},
   })
-  return { props, rendered, presenter, setNow: (t: number) => { now = t } }
+  return { props, rendered, presenter, instances, setNow: (t: number) => { now = t } }
 }
 
 afterEach(() => vi.restoreAllMocks())
+
+describe('public tile inspection', () => {
+  it('exposes discards, visible meld faces and minglou only, clearing old targets on rebuild', () => {
+    const s = setup()
+    s.props.players[1].hand = ['s8']
+    s.props.players[1].discards = ['s7']
+    s.props.players[2].melds = [{ type: 'angang', tile: 'p3', tiles: ['p3','p3','p3','p3'] }]
+    const inspect = (index: number) => { vi.mocked(s.instances.pick).mockReturnValue(index); return s.presenter.inspect(new THREE.Raycaster()) }
+    s.presenter.rebuild()
+    expect(inspect(0)).toBeNull()
+    expect(inspect(1)).toEqual({ tile: 's7', source: 'discard', playerIndex: 1 })
+    expect(inspect(2)).toBeNull()
+    expect(inspect(3)).toEqual({ tile: 'p3', source: 'meld', playerIndex: 2 })
+    s.props.players[1].isMingLou = true
+    s.presenter.rebuild()
+    expect(inspect(0)).toEqual({ tile: 's8', source: 'minglou', playerIndex: 1 })
+    s.props.players[1].isMingLou = false
+    s.props.revealHands = true
+    s.presenter.rebuild()
+    expect(inspect(0)).toBeNull()
+    s.props.players[1].discards = []
+    s.props.players[2].melds = []
+    s.presenter.rebuild()
+    expect(inspect(1)).toBeNull()
+  })
+})
 
 describe('flower instances', () => {
   it.each([0, 1, 2, 3])('renders flowers face-up for seat %i alongside normal melds', seat => {

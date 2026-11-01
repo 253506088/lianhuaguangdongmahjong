@@ -30,6 +30,7 @@ import type { TableProps } from './table/three/tableRenderTypes'
 import { bloodFlowPileAnchor } from './table/three/bloodFlowWinPile'
 import { createBloodFlowWinEffects } from './table/three/bloodFlowWinEffects'
 import { cuePhase } from '../game/variants/lotus/bloodFlow/presentation'
+import type { PublicTileInspection } from './table/tileInspection'
 
 const props = withDefaults(defineProps<TableProps>(), {
   players: () => [], localSeat: 0, currentPlayer: -1, lastDiscard: null, wall: () => [], wallHeadDrawn: 0, wallCount: 0, horses: () => [],
@@ -45,6 +46,7 @@ const emit = defineEmits<{
   ready: []
   loadError: [message: string]
   pileAnchors: [anchors: { left: number; top: number }[]]
+  inspectTile: [inspection: PublicTileInspection & { x: number; y: number }]
 }>()
 
 const canvas = ref(null)
@@ -76,6 +78,21 @@ const staticResources = []
 const dynamicResources = []
 let tableScene: ReturnType<typeof createStaticTableScene>
 let tableTiles: ReturnType<typeof createTableTilePresenter>
+const inspectionRay = new THREE.Raycaster()
+let inspectionStart: { id: number; x: number; y: number } | null = null
+function beginInspection(event: PointerEvent) {
+  inspectionStart = event.isPrimary && event.button === 0 ? { id: event.pointerId, x: event.clientX, y: event.clientY } : null
+}
+function finishInspection(event: MouseEvent) {
+  const start = inspectionStart
+  inspectionStart = null
+  if (!start || Math.hypot(event.clientX - start.x, event.clientY - start.y) > 12 || !tableTiles || !camera) return
+  const rect = (event.currentTarget as HTMLCanvasElement).getBoundingClientRect()
+  camera.updateMatrixWorld()
+  inspectionRay.setFromCamera(new THREE.Vector2((event.clientX - rect.left) / rect.width * 2 - 1, 1 - (event.clientY - rect.top) / rect.height * 2), camera)
+  const inspection = tableTiles.inspect(inspectionRay)
+  if (inspection) emit('inspectTile', { ...inspection, x: event.clientX, y: event.clientY })
+}
 // 中控台与墨玉台面的 Z 中心（桌身中心，保持不变）
 const PLAY_AREA_OFFSET_Z = -1.65
 // 牌层（牌墙/牌河/手牌/副露/骰子）的 Z 中心：单独向本家（+z）偏移，靠近玩家侧
@@ -361,6 +378,7 @@ function render(time = 0) {
       canvasElement.dataset.cameraFov = camera.fov.toFixed(6)
       canvasElement.dataset.cameraDirection = camera.getWorldDirection(new THREE.Vector3()).toArray().join(',')
       canvasElement.dataset.handFaceRects = JSON.stringify(tableTiles.handFaceScreenRects(camera))
+      canvasElement.dataset.inspectionPoints = JSON.stringify(tableTiles.inspectionScreenPoints(camera))
     }
     if (outlineEffect) outlineEffect.render(scene, camera)
     else renderer.render(scene, camera)
@@ -707,5 +725,6 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <canvas ref="canvas" class="mahjong-scene" :data-table-theme="props.themeName ?? 'jade'" aria-hidden="true"></canvas>
+  <canvas ref="canvas" class="mahjong-scene" :data-table-theme="props.themeName ?? 'jade'" aria-hidden="true"
+    @pointerdown="beginInspection" @click="finishInspection" @pointercancel="inspectionStart = null"></canvas>
 </template>
